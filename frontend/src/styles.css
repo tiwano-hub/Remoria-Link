@@ -1,0 +1,110 @@
+:root {
+  --bg: #f4f6f9;
+  --panel: #ffffff;
+  --ink: #1f2733;
+  --muted: #6b7684;
+  --line: #e3e8ef;
+  --brand: #1b6ef3;
+  --brand-dark: #1457c4;
+  --danger: #e0463b;
+  --ok: #1f9d57;
+  --warn: #d98a00;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+}
+a { color: var(--brand); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.app { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 220px;
+  background: #11203a;
+  color: #cdd7e6;
+  padding: 16px 0;
+  flex-shrink: 0;
+}
+.sidebar .logo { font-weight: 700; font-size: 18px; color: #fff; padding: 8px 20px 16px; }
+.sidebar .logo span { color: #6fa8ff; }
+.sidebar nav a {
+  display: block; padding: 9px 20px; color: #cdd7e6; font-size: 13px;
+}
+.sidebar nav a:hover { background: #1b3357; text-decoration: none; }
+.sidebar nav a.active { background: var(--brand); color: #fff; }
+.sidebar .group { padding: 14px 20px 4px; font-size: 11px; color: #6d7e98; }
+
+.main { flex: 1; min-width: 0; }
+.topbar {
+  height: 52px; background: var(--panel); border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+}
+.topbar .user { color: var(--muted); font-size: 13px; }
+.content { padding: 22px; }
+
+.card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 18px; margin-bottom: 18px;
+}
+.card h2 { margin: 0 0 14px; font-size: 16px; }
+.card h3 { margin: 16px 0 8px; font-size: 14px; color: var(--muted); }
+
+.row { display: flex; gap: 12px; flex-wrap: wrap; }
+.col { flex: 1; min-width: 180px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+input, select, textarea {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px;
+  font-size: 14px; background: #fff; color: var(--ink);
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid #bcd4ff; border-color: var(--brand); }
+.field { margin-bottom: 12px; }
+
+button, .btn {
+  background: var(--brand); color: #fff; border: none; border-radius: 7px;
+  padding: 9px 16px; font-size: 14px; cursor: pointer; font-weight: 600;
+}
+button:hover { background: var(--brand-dark); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.btn-sub { background: #eef2f8; color: var(--ink); }
+.btn-sub:hover { background: #e2e8f2; }
+.btn-danger { background: var(--danger); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+tr:hover td { background: #fafbfd; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.badge.gray { background: #eceff3; color: #5b6675; }
+.badge.blue { background: #e1edff; color: #1457c4; }
+.badge.green { background: #def3e6; color: #1f7d47; }
+.badge.red { background: #fde3e1; color: #c43329; }
+.badge.amber { background: #fdeecf; color: #a96b00; }
+
+.muted { color: var(--muted); }
+.right { text-align: right; }
+.tag-internal { color: var(--warn); font-size: 11px; border: 1px dashed var(--warn); padding: 1px 6px; border-radius: 5px; }
+.error { color: var(--danger); font-size: 13px; margin: 8px 0; }
+.toolbar { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 14px; }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+.kpi .label { font-size: 12px; color: var(--muted); }
+.kpi .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+.center-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.login-box { width: 360px; }
+.divider { height: 1px; background: var(--line); margin: 14px 0; }
+.pill-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.pill-tabs button { background: #eef2f8; color: var(--ink); }
+.pill-tabs button.active { background: var(--brand); color: #fff; }
+.signpad { border: 1px solid var(--line); border-radius: 8px; background: #fff; touch-action: none; }

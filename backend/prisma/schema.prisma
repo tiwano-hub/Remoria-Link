@@ -1,0 +1,534 @@
+// Remoria Link - Prisma schema
+// 金額はすべて「税込・円（整数）」で保存し、税抜・消費税額はアプリ側で算出/保存する。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// 列挙型
+// ============================================================
+
+enum Role {
+  ADMIN          // 管理者
+  STORE_MANAGER  // 店舗責任者
+  APPRAISER      // 査定担当者
+  BOOKER         // 予約担当者
+  VIEWER         // 閲覧専用
+}
+
+enum CaseStatus {
+  INQUIRY      // 問合中
+  RESERVED     // 予約中
+  APPRAISING   // 査定中
+  APPROVED     // 承認済
+  EXECUTED     // 実施済
+  COMPLETED    // 完了
+  CONSIDERING  // 検討中
+  CANCELLED    // 中止
+}
+
+enum PurchaseMethod {
+  VISIT     // 出張
+  DELIVERY  // 宅配
+  STORE     // 店頭
+}
+
+enum AppointmentRank {
+  A
+  B
+  C
+  D
+  E
+  F
+}
+
+enum CustomerType {
+  NEW       // 新規
+  REPEATER  // リピーター
+}
+
+enum Grade {
+  N
+  S
+  A
+  B
+  C
+  D
+  E
+  J
+  NONE // なし
+}
+
+enum InventoryStatus {
+  IN_STOCK  // 在庫中
+  LISTED    // 出品中
+  SOLD      // 販売済
+  DISPOSED  // 処分済
+  RETURNED  // 返品
+  ON_HOLD   // 保留
+}
+
+enum PaymentDirection {
+  DEPOSIT     // 入金（顧客→当社）
+  WITHDRAWAL  // 出金（当社→顧客）
+}
+
+enum PaymentStatus {
+  SCHEDULED  // 予定
+  COMPLETED  // 完了
+  CANCELLED  // 取消
+}
+
+enum AccountType {
+  ORDINARY  // 普通
+  CURRENT   // 当座
+  SAVINGS   // 貯蓄
+}
+
+enum SettlementMethod {
+  CASH           // 現金
+  BANK_TRANSFER  // 振込
+  OFFSET         // 差引精算
+}
+
+enum ReceiptStatus {
+  ISSUED     // 発行済
+  CANCELLED  // 取消
+  REISSUED   // 再発行（旧領収書）
+}
+
+enum VerificationMethod {
+  FACE_TO_FACE              // 対面確認（出張・店頭）
+  NONFACE_REGISTERED_MAIL   // 非対面：本人限定受取郵便
+  NONFACE_ID_IMAGE_PLUS     // 非対面：身分証画像送信＋転送不要書留
+  NONFACE_IC_CHIP           // 非対面：ICチップ情報送信
+  NONFACE_E_SIGNATURE       // 非対面：電子署名・公的個人認証
+}
+
+enum IdDocumentType {
+  DRIVERS_LICENSE  // 運転免許証
+  MY_NUMBER_CARD   // マイナンバーカード
+  PASSPORT         // パスポート
+  RESIDENCE_CARD   // 在留カード
+  HEALTH_INSURANCE // 健康保険証
+  OTHER
+}
+
+enum SaleStatus {
+  PENDING    // 販売処理中
+  COMPLETED  // 完了
+  CANCELLED  // 取消
+}
+
+enum AuditAction {
+  CASE_CREATE
+  CASE_UPDATE
+  CONTRACT_ISSUE
+  SIGNATURE_COMPLETE
+  IDENTITY_REGISTER
+  AMOUNT_CHANGE
+  INVENTORY_REGISTER
+  SALE_REGISTER
+  RECEIPT_ISSUE
+  DEPOSIT_REGISTER
+  WITHDRAWAL_REGISTER
+  DELETE
+  LOGIN
+}
+
+// ============================================================
+// マスタ / ユーザー
+// ============================================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  googleId  String?  @unique
+  role      Role     @default(VIEWER)
+  active    Boolean  @default(true)
+  storeId   String?
+  store     Store?   @relation(fields: [storeId], references: [id])
+  calendarId String? // 担当者の Google カレンダーID
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookedCases    Case[] @relation("Booker")
+  appraisedCases Case[] @relation("Appraiser")
+  workedCases    Case[] @relation("Worker")
+  auditLogs      AuditLog[]
+}
+
+model Store {
+  id        String   @id @default(cuid())
+  code      String   @unique // 在庫番号プレフィックス 例: KOBE
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  users     User[]
+  cases     Case[]
+  inventory InventoryItem[]
+}
+
+model TaxRate {
+  id        String   @id @default(cuid())
+  rate      Float    // 例: 0.10
+  label     String   // 例: 標準税率10%
+  effectiveFrom DateTime
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model SalesChannel {
+  id        String   @id @default(cuid())
+  name      String   @unique // 販路
+  active    Boolean  @default(true)
+}
+
+model ReferralSource {
+  id        String   @id @default(cuid())
+  name      String   @unique // 反響経路
+  active    Boolean  @default(true)
+}
+
+model StorageLocation {
+  id        String   @id @default(cuid())
+  name      String   @unique // 保管場所
+  active    Boolean  @default(true)
+}
+
+// ============================================================
+// 顧客
+// ============================================================
+
+model Customer {
+  id           String   @id @default(cuid())
+  name         String
+  nameKana     String?
+  phone        String   @unique
+  email        String?
+  postalCode   String?
+  prefecture   String?
+  city         String?
+  address      String?
+  building     String? // マンション名・部屋番号
+  customerType CustomerType @default(NEW)
+  note         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  cases Case[]
+}
+
+// ============================================================
+// 案件
+// ============================================================
+
+model Case {
+  id              String   @id @default(cuid())
+  caseNumber      String   @unique // 案件番号 例: C-20260624-0001
+  customerId      String
+  customer        Customer @relation(fields: [customerId], references: [id])
+  storeId         String?
+  store           Store?   @relation(fields: [storeId], references: [id])
+
+  bookerId        String?
+  booker          User?    @relation("Booker", fields: [bookerId], references: [id])
+  appraiserId     String?
+  appraiser       User?    @relation("Appraiser", fields: [appraiserId], references: [id])
+  workerId        String?
+  worker          User?    @relation("Worker", fields: [workerId], references: [id])
+
+  reservedAt      DateTime? // 予約日
+  appraisalAt     DateTime? // 査定日
+  workAt          DateTime? // 作業日
+  contractAt      DateTime? // 契約日
+
+  appraisalHours  Float?   // 査定時間（0.5刻み）
+  workHours       Float?   // 作業時間（0.5刻み）
+
+  status          CaseStatus @default(INQUIRY)
+  purchaseMethod  PurchaseMethod?
+  referralSource  String?  // 反響経路
+  appointmentRank AppointmentRank?
+
+  internalMemo    String?  // 社内メモ（顧客非表示）
+  customerMessage String?  // 顧客向けメッセージ
+
+  // Google カレンダー連携
+  appraisalEventId String?
+  workEventId      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  purchaseItems PurchaseItem[]
+  caseOptions   CaseOption[]
+  costOptions   CostOption[]
+  contracts     Contract[]
+  identity      IdentityVerification[]
+  receipts      Receipt[]
+  payments      Payment[]
+  inventory     InventoryItem[]
+  settlement    Settlement?
+}
+
+// ============================================================
+// 買取品明細
+// ============================================================
+
+model PurchaseItem {
+  id              String   @id @default(cuid())
+  caseId          String
+  case            Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  name            String   // 商品名
+  quantity        Int      @default(1)
+  grade           Grade    @default(NONE)
+  purchaseAmount  Int      @default(0) // 買取金額（税込）
+  expectedAmount  Int      @default(0) // 見込金額（税込・顧客非表示）
+  salesChannel    String?  // 販路（顧客非表示）
+  note            String?
+  showOnContract  Boolean  @default(true) // 契約書表示／非表示
+  isLost          Boolean  @default(false) // 失点フラグ
+  lostReason      String?  // 失点理由
+  createdAt       DateTime @default(now())
+
+  photos    ItemPhoto[]
+  inventory InventoryItem[]
+}
+
+model ItemPhoto {
+  id             String   @id @default(cuid())
+  purchaseItemId String
+  purchaseItem   PurchaseItem @relation(fields: [purchaseItemId], references: [id], onDelete: Cascade)
+  url            String
+  forContract    Boolean  @default(true) // true=契約書添付, false=社内専用
+  createdAt      DateTime @default(now())
+}
+
+// 案件オプション（顧客から費用を頂く項目・契約書表示）
+model CaseOption {
+  id             String   @id @default(cuid())
+  caseId         String
+  case           Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  name           String
+  quantity       Int      @default(1)
+  amount         Int      @default(0) // 税込
+  note           String?
+  showOnContract Boolean  @default(true)
+  deductible     Boolean  @default(true) // 差引対象
+  createdAt      DateTime @default(now())
+}
+
+// 原価オプション（社内原価・顧客/契約書/メール 非表示）
+model CostOption {
+  id        String   @id @default(cuid())
+  caseId    String
+  case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  name      String
+  quantity  Int      @default(1)
+  amount    Int      @default(0) // 税込
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+// ============================================================
+// 契約 / 署名 / 本人確認
+// ============================================================
+
+model Contract {
+  id              String   @id @default(cuid())
+  caseId          String
+  case            Case     @relation(fields: [caseId], references: [id])
+  token           String   @unique // 顧客アクセス用URLトークン
+  status          String   @default("DRAFT") // DRAFT/SENT/SIGNED/COMPLETED
+  settlementMethod SettlementMethod? // 支払方法
+  pdfUrl          String?  // 確定後の契約書PDF
+  contentHash     String?  // 改ざん検知用ハッシュ
+  snapshot        Json?    // 発行時点の契約内容スナップショット
+  sentAt          DateTime?
+  signedAt        DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  signature Signature?
+}
+
+model Signature {
+  id         String   @id @default(cuid())
+  contractId String   @unique
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  imageData  String   // 手書きサイン画像（dataURL/URL）
+  signedName String?
+  signedAt   DateTime @default(now())
+  ipAddress  String?
+}
+
+model IdentityVerification {
+  id             String   @id @default(cuid())
+  caseId         String
+  case           Case     @relation(fields: [caseId], references: [id])
+  method         VerificationMethod
+  documentType   IdDocumentType
+  imageUrl       String?  // 身分証画像
+  verifiedAt     DateTime?
+  verifierId     String?  // 確認担当者
+  verificationLog Json?   // 確認ログ
+  createdAt      DateTime @default(now())
+}
+
+// ============================================================
+// 電子領収書
+// ============================================================
+
+model Receipt {
+  id            String   @id @default(cuid())
+  receiptNumber String   @unique
+  caseId        String
+  case          Case     @relation(fields: [caseId], references: [id])
+  issuedAt      DateTime @default(now())
+  recipientName String   // 宛名
+  amount        Int      // 金額（税込）
+  taxRate       Float
+  description   String?  // 但し書き
+  paymentMethod SettlementMethod
+  issuerInfo    Json     // 発行者情報
+  registrationNumber String? // 適格請求書発行事業者登録番号
+  status        ReceiptStatus @default(ISSUED)
+  pdfUrl        String?
+  contentHash   String?
+  token         String   @unique // 顧客閲覧URL
+  // 取消・再発行履歴
+  replacesId    String?  // この領収書が取り消した旧領収書
+  replacedById  String?  // この領収書を取り消した新領収書
+  cancelReason  String?
+  createdAt     DateTime @default(now())
+}
+
+// ============================================================
+// 入出金 / 精算
+// ============================================================
+
+model Payment {
+  id            String   @id @default(cuid())
+  caseId        String
+  case          Case     @relation(fields: [caseId], references: [id])
+  direction     PaymentDirection
+  scheduledDate DateTime?
+  executedDate  DateTime?
+  amount        Int
+  // 振込先／振込元
+  counterparty  String?  // 振込先／振込元 名義表示
+  bankName      String?
+  branchName    String?
+  accountType   AccountType?
+  accountNumber String?
+  accountHolder String?
+  status        PaymentStatus @default(SCHEDULED)
+  note          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// 現金精算（現金受領・現金支払）
+model Settlement {
+  id              String   @id @default(cuid())
+  caseId          String   @unique
+  case            Case     @relation(fields: [caseId], references: [id])
+  cashReceived    Int      @default(0) // 顧客から現金受領
+  cashPaid        Int      @default(0) // 顧客へ現金支払
+  customerPayment Int      @default(0) // 顧客への支払額（合計）
+  customerReceipt Int      @default(0) // 顧客からの受領額（合計）
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================================
+// 在庫 / 販売
+// ============================================================
+
+model InventoryItem {
+  id              String   @id @default(cuid())
+  inventoryNumber String   @unique // KOBE-20260624-0001
+  storeId         String?
+  store           Store?   @relation(fields: [storeId], references: [id])
+  name            String
+  quantity        Int      @default(1)
+  grade           Grade    @default(NONE)
+  purchaseAmount  Int      @default(0) // 買取金額（税込）
+  expectedAmount  Int      @default(0) // 見込金額（税込）
+  salesChannel    String?  // 販路
+  sourceCaseId    String?  // 仕入元案件
+  sourceCase      Case?    @relation(fields: [sourceCaseId], references: [id])
+  sourceItemId    String?
+  sourceItem      PurchaseItem? @relation(fields: [sourceItemId], references: [id])
+  stockedAt       DateTime @default(now()) // 仕入日
+  status          InventoryStatus @default(IN_STOCK)
+  storageLocation String?
+  note            String?
+  appraiserId     String?  // 査定担当者（分析用）
+  bookerId        String?  // 予約担当者（分析用）
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  photos InventoryPhoto[]
+  sales  Sale[]
+}
+
+model InventoryPhoto {
+  id          String   @id @default(cuid())
+  inventoryId String
+  inventory   InventoryItem @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  url         String
+  createdAt   DateTime @default(now())
+}
+
+model Sale {
+  id            String   @id @default(cuid())
+  inventoryId   String
+  inventory     InventoryItem @relation(fields: [inventoryId], references: [id])
+  soldDate      DateTime
+  paidDate      DateTime?
+  salesAmount   Int      // 販売金額（税込）
+  fee           Int      @default(0) // 販売手数料（税込）
+  shipping      Int      @default(0) // 送料（税込）
+  otherCost     Int      @default(0) // その他原価（税込）
+  salesChannel  String?  // 販路
+  buyer         String?  // 販売先
+  status        SaleStatus @default(COMPLETED)
+  note          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// ============================================================
+// 操作ログ
+// ============================================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  action      AuditAction
+  description String?
+  beforeData  Json?
+  afterData   Json?
+  ipAddress   String?
+  caseNumber  String?  // 対象案件番号
+  entity      String?
+  entityId    String?
+  createdAt   DateTime @default(now())
+}
+
+// 連番採番用
+model Counter {
+  key   String @id // 例: case-20260624 / inv-KOBE-20260624 / receipt-20260624
+  value Int    @default(0)
+}

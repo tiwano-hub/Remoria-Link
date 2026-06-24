@@ -1,0 +1,17 @@
+{
+  "name": "remoria-link",
+  "version": "0.1.0",
+  "private": true,
+  "description": "出張買取向けの案件管理・電子契約・在庫管理・分析システム",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev:backend": "npm --workspace backend run dev",
+    "dev:frontend": "npm --workspace frontend run dev",
+    "build": "npm --workspace backend run build && npm --workspace frontend run build",
+    "seed": "npm --workspace backend run seed"
+  },
+  "license": "UNLICENSED"
+}
