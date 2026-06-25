@@ -1,9 +1,11 @@
 # Render Blueprint for Remoria Link
 # https://render.com/docs/blueprint-spec
-databases:
-  - name: remoria-link-db
-    databaseName: remoria_link
-    plan: free
+#
+# 注意: Render 無料プランは「無料DBは1つまで」。既存の無料DBがある場合、新規DBは作れません。
+# 本Blueprintは新規DBを作らず、既存の PostgreSQL を流用します。
+# デプロイ後、remoria-link-api の環境変数 DATABASE_URL に、既存DBの接続URLの末尾へ
+# 「?schema=remoria」を付けて設定してください（例: postgresql://...:5432/dbname?schema=remoria）。
+# これにより本アプリの表は remoria スキーマに隔離され、既存データに影響しません。
 
 services:
   - type: web
@@ -16,10 +18,9 @@ services:
     startCommand: npm run start
     healthCheckPath: /api/health
     envVars:
+      # 既存DBの接続URL（末尾に ?schema=remoria を付与）を手動で設定する
       - key: DATABASE_URL
-        fromDatabase:
-          name: remoria-link-db
-          property: connectionString
+        sync: false
       - key: NODE_ENV
         value: production
       - key: JWT_SECRET
