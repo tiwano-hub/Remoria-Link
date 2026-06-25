@@ -95,6 +95,8 @@ router.get('/:id', async (req, res) => {
 
 const customerSchema = z.object({
   name: z.string().min(1),
+  lastName: z.string().optional(),
+  firstName: z.string().optional(),
   nameKana: z.string().optional(),
   phone: z.string().min(1),
   email: z.string().optional(),
@@ -110,9 +112,18 @@ const customerSchema = z.object({
 router.put('/:id', denyViewer, async (req, res) => {
   const parsed = customerSchema.partial().safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  const data: any = { ...parsed.data };
+  // 姓・名のどちらかが更新されたら、結合した name を作り直す
+  if (data.lastName !== undefined || data.firstName !== undefined) {
+    const existing: any = await prisma.customer.findUnique({ where: { id: req.params.id } });
+    const ln = data.lastName !== undefined ? data.lastName : existing?.lastName;
+    const fn = data.firstName !== undefined ? data.firstName : existing?.firstName;
+    const full = [ln, fn].filter(Boolean).join(' ');
+    if (full) data.name = full;
+  }
   const customer = await prisma.customer.update({
     where: { id: req.params.id },
-    data: parsed.data,
+    data,
   });
   res.json(customer);
 });

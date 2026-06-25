@@ -210,7 +210,9 @@ model StorageLocation {
 
 model Customer {
   id           String   @id @default(cuid())
-  name         String
+  name         String   // 姓+名 の結合（互換のため自動生成）
+  lastName     String?  // 姓（苗字）
+  firstName    String?  // 名
   nameKana     String?
   phone        String   @unique
   email        String?

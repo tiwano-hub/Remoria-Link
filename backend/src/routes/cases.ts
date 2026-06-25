@@ -12,7 +12,9 @@ const router = Router();
 router.use(authenticate);
 
 const customerInput = z.object({
-  name: z.string().min(1),
+  name: z.string().optional(),
+  lastName: z.string().optional(),
+  firstName: z.string().optional(),
   nameKana: z.string().optional(),
   phone: z.string().min(1),
   email: z.string().optional(),
@@ -56,13 +58,17 @@ router.post('/', denyViewer, async (req, res) => {
   const phone = parsed.data.customer.phone.replace(/[^0-9]/g, '');
   const existing = await prisma.customer.findUnique({ where: { phone } });
 
+  const ci = parsed.data.customer;
+  const fullName = [ci.lastName, ci.firstName].filter(Boolean).join(' ') || ci.name;
+  if (!fullName) return res.status(400).json({ error: '顧客名（姓）を入力してください' });
+
   const customer = existing
     ? await prisma.customer.update({
         where: { id: existing.id },
-        data: { ...parsed.data.customer, phone, customerType: 'REPEATER' },
+        data: { ...ci, name: fullName, phone, customerType: 'REPEATER' },
       })
     : await prisma.customer.create({
-        data: { ...parsed.data.customer, phone, customerType: 'NEW' },
+        data: { ...ci, name: fullName, phone, customerType: 'NEW' },
       });
 
   const caseNumber = await nextCaseNumber();

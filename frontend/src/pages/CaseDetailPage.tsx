@@ -165,23 +165,27 @@ function Kpi({ label, v }: { label: string; v: any }) {
 function CustomerEdit({ customer, reload }: any) {
   const save = async (patch: any) => { await api.put(`/api/customers/${customer.id}`, patch); reload(); };
   const onEnter = (e: any) => { if (e.key === 'Enter') e.currentTarget.blur(); };
-  const txt = (k: string, label: string, required = false) => (
-    <Field label={label}>
-      <input
-        defaultValue={customer[k] || ''}
-        onKeyDown={onEnter}
-        onBlur={(e) => {
-          const v = e.target.value;
-          if (v === (customer[k] || '')) return; // 変更なしは保存しない
-          if (required && !v) return;            // 必須項目は空保存しない
-          save({ [k]: v });
-        }}
-      />
-    </Field>
-  );
+  const txt = (k: string, label: string, required = false, fallback = '') => {
+    const initial = customer[k] || fallback || '';
+    return (
+      <Field label={label}>
+        <input
+          defaultValue={initial}
+          onKeyDown={onEnter}
+          onBlur={(e) => {
+            const v = e.target.value;
+            if (v === initial) return;   // 変更なしは保存しない
+            if (required && !v) return;  // 必須項目は空保存しない
+            save({ [k]: v });
+          }}
+        />
+      </Field>
+    );
+  };
   return (
     <div className="grid2">
-      {txt('name', '顧客名', true)}
+      {txt('lastName', '姓（苗字）', true, customer.name)}
+      {txt('firstName', '名')}
       {txt('nameKana', '顧客名カナ')}
       {txt('phone', '電話番号', true)}
       {txt('email', 'メールアドレス')}

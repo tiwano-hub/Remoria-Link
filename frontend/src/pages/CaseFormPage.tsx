@@ -22,7 +22,7 @@ export default function CaseFormPage() {
   const [saving, setSaving] = useState(false);
 
   const [customer, setCustomer] = useState<any>({
-    name: '', nameKana: '', phone: '', email: '', postalCode: '',
+    lastName: '', firstName: '', nameKana: '', phone: '', email: '', postalCode: '',
     prefecture: '', city: '', address: '', building: '', customerType: 'NEW',
   });
   const [cs, setCs] = useState<any>({
@@ -39,7 +39,16 @@ export default function CaseFormPage() {
 
   useEffect(() => {
     if (state?.customer) {
-      setCustomer((c: any) => ({ ...c, ...state.customer, phone: state.customer.phone || state.phone || '' }));
+      setCustomer((c: any) => {
+        const sc: any = state.customer;
+        return {
+          ...c,
+          ...sc,
+          lastName: sc.lastName || sc.name || c.lastName || '',
+          firstName: sc.firstName || c.firstName || '',
+          phone: sc.phone || state.phone || '',
+        };
+      });
     } else if (state?.phone) {
       setCustomer((c: any) => ({ ...c, phone: state.phone }));
     }
@@ -47,7 +56,7 @@ export default function CaseFormPage() {
 
   const submit = async (e?: FormEvent) => {
     e?.preventDefault();
-    if (saving || !customer.name || !customer.phone) return;
+    if (saving || !customer.lastName || !customer.phone) return;
     setError('');
     setSaving(true);
     try {
@@ -88,7 +97,8 @@ export default function CaseFormPage() {
       <div className="card">
         <h3>顧客情報</h3>
         <div className="grid3">
-          <Field label="顧客名"><input value={customer.name} onChange={cf('name')} /></Field>
+          <Field label="姓（苗字）"><input value={customer.lastName} onChange={cf('lastName')} /></Field>
+          <Field label="名"><input value={customer.firstName} onChange={cf('firstName')} /></Field>
           <Field label="顧客名カナ"><input value={customer.nameKana} onChange={cf('nameKana')} /></Field>
           <Field label="電話番号"><input value={customer.phone} onChange={cf('phone')} /></Field>
           <Field label="メールアドレス"><input value={customer.email} onChange={cf('email')} /></Field>
@@ -172,7 +182,7 @@ export default function CaseFormPage() {
         <Field label="顧客向けメッセージ"><textarea rows={2} value={cs.customerMessage} onChange={sf('customerMessage')} /></Field>
       </div>
 
-      <button type="submit" disabled={saving || !customer.name || !customer.phone}>
+      <button type="submit" disabled={saving || !customer.lastName || !customer.phone}>
         {saving ? '登録中...' : '案件を登録'}
       </button>
       </form>
