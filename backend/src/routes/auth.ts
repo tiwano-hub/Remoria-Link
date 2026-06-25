@@ -64,8 +64,16 @@ router.post('/google', async (req, res) => {
  * 開発用ログイン（GOOGLE_CLIENT_ID 未設定時のみ有効）。
  * 本番では無効。メールアドレスを指定して既存ユーザーとしてログイン。
  */
+/**
+ * 簡易ログイン（メールアドレスのみ）。
+ * 開発環境では常に有効。本番環境では ALLOW_SIMPLE_LOGIN=true のときだけ有効。
+ * ※本番で有効にするのは Google 認証設定前の初期アクセス用。運用開始後は
+ *   ALLOW_SIMPLE_LOGIN を未設定（無効）にし、Google 認証へ切り替えてください。
+ */
 router.post('/dev-login', async (req, res) => {
-  if (env.nodeEnv === 'production') return res.status(403).json({ error: '無効です' });
+  if (env.nodeEnv === 'production' && !env.allowSimpleLogin) {
+    return res.status(403).json({ error: '簡易ログインは無効です（管理者にお問い合わせください）' });
+  }
   const { email } = req.body as { email?: string };
   if (!email) return res.status(400).json({ error: 'email が必要です' });
   let user = await prisma.user.findUnique({ where: { email } });

@@ -11,6 +11,8 @@ export const env = {
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
   googleCalendarCredentials: process.env.GOOGLE_CALENDAR_CREDENTIALS || '',
   appPublicUrl: process.env.APP_PUBLIC_URL || 'http://localhost:5173',
+  // 本番で簡易ログイン（メールのみ）を許可するか。Google認証設定前の初期アクセス用。
+  allowSimpleLogin: process.env.ALLOW_SIMPLE_LOGIN === 'true',
 };
 
 export const isProd = env.nodeEnv === 'production';
