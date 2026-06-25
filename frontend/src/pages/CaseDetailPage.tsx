@@ -98,7 +98,19 @@ export default function CaseDetailPage() {
             </Field>
             <Field label="予約日"><input key={`r${c.reservedAt || ''}`} type="datetime-local" defaultValue={localv(c.reservedAt)} onKeyDown={saveOnEnter} onBlur={(e) => saveField({ reservedAt: e.target.value || null })} /></Field>
             <Field label="査定日"><input type="datetime-local" defaultValue={localv(c.appraisalAt)} onKeyDown={saveOnEnter} onBlur={(e) => saveField({ appraisalAt: e.target.value || null })} /></Field>
+            <Field label="査定時間（h・カレンダー反映）">
+              <select value={hourValue(c.appraisalHours)} onChange={(e) => saveField({ appraisalHours: e.target.value === '' ? null : Number(e.target.value) })}>
+                <option value="">-</option>
+                {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+              </select>
+            </Field>
             <Field label="作業日"><input type="datetime-local" defaultValue={localv(c.workAt)} onKeyDown={saveOnEnter} onBlur={(e) => saveField({ workAt: e.target.value || null })} /></Field>
+            <Field label="作業時間（h・カレンダー反映）">
+              <select value={hourValue(c.workHours)} onChange={(e) => saveField({ workHours: e.target.value === '' ? null : Number(e.target.value) })}>
+                <option value="">-</option>
+                {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+              </select>
+            </Field>
             <Field label="契約日"><input type="datetime-local" defaultValue={localv(c.contractAt)} onKeyDown={saveOnEnter} onBlur={(e) => saveField({ contractAt: e.target.value || null })} /></Field>
           </div>
           <Field label="社内メモ（顧客非表示）"><textarea rows={2} defaultValue={c.internalMemo || ''} onBlur={(e) => saveField({ internalMemo: e.target.value })} /></Field>
@@ -141,6 +153,9 @@ const localv = (d: string | null) => {
   const dt = new Date(d);
   return new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 };
+
+const HOURS = Array.from({ length: 17 }, (_, i) => (i * 0.5).toFixed(1)); // 0.0〜8.0（0.5h刻み）
+const hourValue = (v: any) => (v === null || v === undefined || v === '' ? '' : Number(v).toFixed(1));
 
 function Kpi({ label, v }: { label: string; v: any }) {
   return <div className="kpi"><div className="label">{label}</div><div className="value">{v}</div></div>;
