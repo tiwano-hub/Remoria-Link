@@ -227,7 +227,7 @@ function SavedItemRow({ it, channels, reload }: any) {
   const addPhoto = async (forContract: boolean) => { const file = await pickFile(); if (!file) return; await api.post(`/api/items/${it.id}/photos`, { url: file, forContract }); reload(); };
 
   return (
-    <div className="card" style={{ background: '#fafbfd', ...(it.isLost ? { opacity: 0.6 } : {}) }}>
+    <div className="card" style={it.isLost ? { opacity: 0.6 } : undefined}>
       {it.isLost && <span className="badge red" style={{ marginBottom: 6, display: 'inline-block' }}>失点：{it.lostReason}</span>}
       <div className="grid4">
         <Field label="商品名"><input defaultValue={it.name} onKeyDown={onEnter} onBlur={(e) => { if (e.target.value && e.target.value !== it.name) save({ name: e.target.value }); }} /></Field>
@@ -271,7 +271,7 @@ function NewItemRows({ caseId, channels, reload }: any) {
   return (
     <>
       {rows.map((r, i) => (
-        <div key={i} className="card" style={{ background: '#fff' }}>
+        <div key={i} className="card" style={{ background: 'rgba(37, 229, 138, 0.06)' }}>
           <div className="grid4">
             <Field label="商品名"><input value={r.name} onChange={(e) => upd(i, 'name', e.target.value)} /></Field>
             <Field label="数量"><input type="number" value={r.quantity} onChange={(e) => upd(i, 'quantity', e.target.value)} /></Field>
