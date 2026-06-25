@@ -260,7 +260,7 @@ function NewItemRows({ caseId, channels, reload }: any) {
   const [rows, setRows] = useState<any[]>([blankItem()]);
   const upd = (i: number, k: string, v: any) => setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)));
   const addRow = () => setRows((rs) => [...rs, blankItem()]);
-  const removeRow = (i: number) => setRows((rs) => { const next = rs.filter((_, idx) => idx !== i); return next.length ? next : [blankItem()]; });
+  const removeRow = (i: number) => setRows((rs) => rs.filter((_, idx) => idx !== i));
   const saveRow = async (i: number) => {
     const r = rows[i];
     await api.post('/api/items', { ...r, caseId, quantity: Number(r.quantity), purchaseAmount: Number(r.purchaseAmount), expectedAmount: Number(r.expectedAmount) });
@@ -283,7 +283,7 @@ function NewItemRows({ caseId, channels, reload }: any) {
           </div>
           <div className="row">
             <button onClick={() => saveRow(i)} disabled={!r.name}>この明細を登録</button>
-            {rows.length > 1 && <button className="btn-sub" onClick={() => removeRow(i)}>行を削除</button>}
+            <button className="btn-sub" onClick={() => removeRow(i)}>行を削除</button>
           </div>
         </div>
       ))}
