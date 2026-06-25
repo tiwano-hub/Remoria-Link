@@ -37,6 +37,9 @@ export default function CaseDetailPage() {
     load();
   };
 
+  // 入力欄でEnterを押したら確定（blur→onBlur保存が走る）
+  const saveOnEnter = (e: any) => { if (e.key === 'Enter') e.currentTarget.blur(); };
+
   const autoStock = async () => {
     const r = await api.post<{ created: any[] }>(`/api/inventory/from-case/${id}`);
     alert(`${r.created.length} 件を在庫登録しました`);
@@ -68,7 +71,16 @@ export default function CaseDetailPage() {
           <h3>案件情報</h3>
           <div className="grid2">
             <Field label="ステータス">
-              <select value={c.status} onChange={(e) => saveField({ status: e.target.value })}>
+              <select
+                value={c.status}
+                onChange={(e) => {
+                  const status = e.target.value;
+                  const patch: any = { status };
+                  // 「予約中」にした瞬間、予約日が未設定なら現在日時を自動登録
+                  if (status === 'RESERVED' && !c.reservedAt) patch.reservedAt = new Date().toISOString();
+                  saveField(patch);
+                }}
+              >
                 {Object.entries(CASE_STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </Field>
@@ -87,9 +99,10 @@ export default function CaseDetailPage() {
                 <option value="">-</option>{users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
             </Field>
-            <Field label="査定日"><input type="datetime-local" defaultValue={localv(c.appraisalAt)} onBlur={(e) => saveField({ appraisalAt: e.target.value || null })} /></Field>
-            <Field label="作業日"><input type="datetime-local" defaultValue={localv(c.workAt)} onBlur={(e) => saveField({ workAt: e.target.value || null })} /></Field>
-            <Field label="契約日"><input type="datetime-local" defaultValue={localv(c.contractAt)} onBlur={(e) => saveField({ contractAt: e.target.value || null })} /></Field>
+            <Field label="予約日"><input key={`r${c.reservedAt || ''}`} type="datetime-local" defaultValue={localv(c.reservedAt)} onKeyDown={saveOnEnter} onBlur={(e) => saveField({ reservedAt: e.target.value || null })} /></Field>
+            <Field label="査定日"><input type="datetime-local" defaultValue={localv(c.appraisalAt)} onKeyDown={saveOnEnter} onBlur={(e) => saveField({ appraisalAt: e.target.value || null })} /></Field>
+            <Field label="作業日"><input type="datetime-local" defaultValue={localv(c.workAt)} onKeyDown={saveOnEnter} onBlur={(e) => saveField({ workAt: e.target.value || null })} /></Field>
+            <Field label="契約日"><input type="datetime-local" defaultValue={localv(c.contractAt)} onKeyDown={saveOnEnter} onBlur={(e) => saveField({ contractAt: e.target.value || null })} /></Field>
           </div>
           <Field label="社内メモ（顧客非表示）"><textarea rows={2} defaultValue={c.internalMemo || ''} onBlur={(e) => saveField({ internalMemo: e.target.value })} /></Field>
         </div>
