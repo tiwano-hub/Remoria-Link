@@ -16,6 +16,7 @@ export default function LoginPage() {
   const btnRef = useRef<HTMLDivElement>(null);
   const [email, setEmail] = useState('admin@example.com');
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (user) navigate('/cases');
@@ -49,11 +50,16 @@ export default function LoginPage() {
   }, [loginWithGoogle, navigate]);
 
   const handleDev = async () => {
+    if (busy) return;
+    setError('');
+    setBusy(true);
     try {
       await devLogin(email);
       navigate('/cases');
     } catch (e: any) {
-      setError(e.message);
+      setError(e?.message || 'ログインに失敗しました。通信状況をご確認ください。');
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -72,9 +78,9 @@ export default function LoginPage() {
 
         <div className="divider" />
         <label>開発用ログイン（メールアドレス）</label>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@example.com" />
-        <button style={{ width: '100%', marginTop: 10 }} onClick={handleDev}>
-          ログイン
+        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@example.com" disabled={busy} />
+        <button style={{ width: '100%', marginTop: 10 }} onClick={handleDev} disabled={busy}>
+          {busy ? 'ログイン中…（サーバー起動に最大1分かかる場合があります）' : 'ログイン'}
         </button>
         <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
           初回ログインのユーザーは自動的に管理者になります。
