@@ -26,42 +26,39 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ===== 動く背景（SF風グリーンHUD） ===== */
-/* 下層：ベース＋ゆっくり脈動するグロー */
+/* ===== 動く背景（アップロード画像のSF風HUD） ===== */
+/* 下層：画像をゆっくりズーム（微妙に動く）＋可読性確保の暗幕 */
 body::before {
   content: '';
   position: fixed;
-  inset: 0;
+  inset: -4%;
   z-index: -2;
   background:
-    radial-gradient(60% 50% at 18% 26%, rgba(22, 190, 100, 0.22), transparent 60%),
-    radial-gradient(50% 45% at 86% 16%, rgba(30, 230, 130, 0.18), transparent 60%),
-    radial-gradient(95% 65% at 50% 128%, rgba(16, 160, 84, 0.34), transparent 62%),
-    linear-gradient(180deg, #04140c 0%, #03100a 55%, #020b07 100%);
-  animation: bgpulse 16s ease-in-out infinite alternate;
+    linear-gradient(rgba(3, 16, 10, 0.45), rgba(2, 11, 7, 0.72)),
+    url('/hud-bg.png') center center / cover no-repeat,
+    #03100a;
+  animation: bgzoom 26s ease-in-out infinite alternate;
+  will-change: transform;
 }
-/* 上層：流れるグリッド＋走査線 */
+/* 上層：うっすら流れる走査線で「生きてる」感を追加 */
 body::after {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-image:
-    repeating-linear-gradient(0deg, transparent 0 2px, rgba(0, 24, 12, 0.28) 2px 3px),
-    linear-gradient(rgba(37, 229, 138, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(37, 229, 138, 0.07) 1px, transparent 1px);
-  background-size: 100% 4px, 46px 46px, 46px 46px;
-  opacity: 0.7;
-  animation: gridmove 16s linear infinite;
+  background-image: repeating-linear-gradient(0deg, transparent 0 2px, rgba(0, 24, 12, 0.22) 2px 3px);
+  background-size: 100% 4px;
+  opacity: 0.5;
+  animation: scanmove 14s linear infinite;
 }
-@keyframes bgpulse {
-  0%   { filter: brightness(0.9);  transform: scale(1); }
-  100% { filter: brightness(1.15); transform: scale(1.05); }
+@keyframes bgzoom {
+  0%   { transform: scale(1) translate(0, 0); }
+  100% { transform: scale(1.09) translate(-1.5%, -1%); }
 }
-@keyframes gridmove {
-  from { background-position: 0 0, 0 0, 0 0; }
-  to   { background-position: 0 4px, 0 46px, 46px 0; }
+@keyframes scanmove {
+  from { background-position: 0 0; }
+  to   { background-position: 0 4px; }
 }
 @media (prefers-reduced-motion: reduce) {
   body::before, body::after { animation: none; }
