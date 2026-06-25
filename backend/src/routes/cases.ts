@@ -16,6 +16,8 @@ const customerInput = z.object({
   lastName: z.string().optional(),
   firstName: z.string().optional(),
   nameKana: z.string().optional(),
+  lastNameKana: z.string().optional(),
+  firstNameKana: z.string().optional(),
   phone: z.string().min(1),
   email: z.string().optional(),
   postalCode: z.string().optional(),
@@ -58,18 +60,18 @@ router.post('/', denyViewer, async (req, res) => {
   const phone = parsed.data.customer.phone.replace(/[^0-9]/g, '');
   const existing = await prisma.customer.findUnique({ where: { phone } });
 
-  const ci = parsed.data.customer;
-  const fullName = [ci.lastName, ci.firstName].filter(Boolean).join(' ') || ci.name;
-  if (!fullName) return res.status(400).json({ error: '顧客名（姓）を入力してください' });
+  const ci: any = parsed.data.customer;
+  const kanji = [ci.lastName, ci.firstName].filter(Boolean).join(' ');
+  const kana = [ci.lastNameKana, ci.firstNameKana].filter(Boolean).join(' ') || ci.nameKana || '';
+  const fullName = kanji || kana || ci.name;
+  if (!fullName) return res.status(400).json({ error: '苗字（カナ）を入力してください' });
+
+  const data: any = { ...ci, name: fullName, phone };
+  if (kana) data.nameKana = kana;
 
   const customer = existing
-    ? await prisma.customer.update({
-        where: { id: existing.id },
-        data: { ...ci, name: fullName, phone, customerType: 'REPEATER' },
-      })
-    : await prisma.customer.create({
-        data: { ...ci, name: fullName, phone, customerType: 'NEW' },
-      });
+    ? await prisma.customer.update({ where: { id: existing.id }, data: { ...data, customerType: 'REPEATER' } })
+    : await prisma.customer.create({ data: { ...data, customerType: 'NEW' } });
 
   const caseNumber = await nextCaseNumber();
   const cf = parsed.data.case || {};

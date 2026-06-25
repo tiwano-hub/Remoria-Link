@@ -210,10 +210,12 @@ model StorageLocation {
 
 model Customer {
   id           String   @id @default(cuid())
-  name         String   // 姓+名 の結合（互換のため自動生成）
-  lastName     String?  // 姓（苗字）
-  firstName    String?  // 名
-  nameKana     String?
+  name         String   // 姓+名 の結合（互換のため自動生成。漢字未入力時はカナ）
+  lastName     String?  // 姓（漢字・顧客が契約書で入力）
+  firstName    String?  // 名（漢字・顧客が契約書で入力）
+  nameKana     String?  // 姓カナ+名カナ の結合
+  lastNameKana String?  // 苗字（カナ）
+  firstNameKana String? // 名（カナ）
   phone        String   @unique
   email        String?
   postalCode   String?

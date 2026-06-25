@@ -82,6 +82,42 @@ router.post('/contracts/:token/identity', async (req, res) => {
   res.status(201).json({ ok: true });
 });
 
+/** POST /api/public/contracts/:token/name  顧客が漢字氏名を入力 */
+router.post('/contracts/:token/name', async (req, res) => {
+  const schema = z.object({ lastName: z.string().min(1), firstName: z.string().optional() });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+  const contract = await prisma.contract.findUnique({
+    where: { token: req.params.token },
+    include: { case: true, signature: true },
+  });
+  if (!contract) return res.status(404).json({ error: '契約書が見つかりません' });
+  if (contract.signature) return res.status(409).json({ error: '既に署名済みです' });
+
+  const fullName = [parsed.data.lastName, parsed.data.firstName].filter(Boolean).join(' ');
+
+  // 顧客マスタに漢字氏名を反映
+  await prisma.customer.update({
+    where: { id: contract.case.customerId },
+    data: { lastName: parsed.data.lastName, firstName: parsed.data.firstName ?? null, name: fullName } as any,
+  });
+
+  // 契約スナップショットの表示名も漢字に更新（確認画面・PDFへ反映）
+  const snap: any = contract.snapshot;
+  if (snap?.customer) snap.customer.name = fullName;
+  await prisma.contract.update({ where: { id: contract.id }, data: { snapshot: snap } });
+
+  await audit(req, {
+    action: 'CASE_UPDATE',
+    caseNumber: contract.case.caseNumber,
+    entity: 'Customer',
+    entityId: contract.case.customerId,
+    description: '顧客による漢字氏名の入力',
+  });
+  res.json({ ok: true });
+});
+
 /** POST /api/public/contracts/:token/sign  手書きサイン → 契約成立・PDF保存 */
 router.post('/contracts/:token/sign', async (req, res) => {
   const schema = z.object({ imageData: z.string(), signedName: z.string().optional() });

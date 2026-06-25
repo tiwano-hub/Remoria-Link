@@ -184,9 +184,10 @@ function CustomerEdit({ customer, reload }: any) {
   };
   return (
     <div className="grid2">
-      {txt('lastName', '姓（苗字）', true, customer.name)}
-      {txt('firstName', '名')}
-      {txt('nameKana', '顧客名カナ')}
+      {txt('lastNameKana', '苗字（カナ）', true, customer.nameKana)}
+      {txt('firstNameKana', '名（カナ）')}
+      {txt('lastName', '姓（漢字・顧客入力）')}
+      {txt('firstName', '名（漢字・顧客入力）')}
       {txt('phone', '電話番号', true)}
       {txt('email', 'メールアドレス')}
       {txt('postalCode', '郵便番号')}

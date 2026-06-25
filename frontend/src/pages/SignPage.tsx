@@ -8,7 +8,8 @@ export default function SignPage() {
   const { token } = useParams();
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState('');
-  const [step, setStep] = useState<'review' | 'identity' | 'sign' | 'done'>('review');
+  const [step, setStep] = useState<'name' | 'review' | 'identity' | 'sign' | 'done'>('name');
+  const [nameForm, setNameForm] = useState({ lastName: '', firstName: '' });
   const [idForm, setIdForm] = useState<any>({ method: '', documentType: 'DRIVERS_LICENSE', imageUrl: '' });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
@@ -52,6 +53,13 @@ export default function SignPage() {
   const end = () => { drawing.current = false; };
   const clear = () => { const c = canvasRef.current!; c.getContext('2d')!.clearRect(0, 0, c.width, c.height); };
 
+  const submitName = async () => {
+    try {
+      await api.post(`/api/public/contracts/${token}/name`, nameForm);
+      await load();
+      setStep('review');
+    } catch (e: any) { setError(e.message); }
+  };
   const submitIdentity = async () => {
     try {
       await api.post(`/api/public/contracts/${token}/identity`, idForm);
@@ -75,6 +83,19 @@ export default function SignPage() {
   return (
     <div style={{ maxWidth: 560, margin: '20px auto', padding: '0 14px' }}>
       <h2>古物売買契約書のご確認</h2>
+
+      {step === 'name' && (
+        <div className="card">
+          <h3>お名前のご入力</h3>
+          <p className="muted">契約書に記載するお名前（漢字）をご入力ください。</p>
+          {s.customer.nameKana && <p className="muted">フリガナ：{s.customer.nameKana}</p>}
+          <label>姓（漢字）</label>
+          <input value={nameForm.lastName} onChange={(e) => setNameForm({ ...nameForm, lastName: e.target.value })} placeholder="山田" />
+          <label style={{ marginTop: 10 }}>名（漢字）</label>
+          <input value={nameForm.firstName} onChange={(e) => setNameForm({ ...nameForm, firstName: e.target.value })} placeholder="太郎" />
+          <button style={{ marginTop: 12 }} onClick={submitName} disabled={!nameForm.lastName}>次へ（契約内容の確認）</button>
+        </div>
+      )}
 
       {step === 'review' && (
         <div className="card">

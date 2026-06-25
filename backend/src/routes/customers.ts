@@ -98,6 +98,8 @@ const customerSchema = z.object({
   lastName: z.string().optional(),
   firstName: z.string().optional(),
   nameKana: z.string().optional(),
+  lastNameKana: z.string().optional(),
+  firstNameKana: z.string().optional(),
   phone: z.string().min(1),
   email: z.string().optional(),
   postalCode: z.string().optional(),
@@ -113,13 +115,16 @@ router.put('/:id', denyViewer, async (req, res) => {
   const parsed = customerSchema.partial().safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const data: any = { ...parsed.data };
-  // 姓・名のどちらかが更新されたら、結合した name を作り直す
-  if (data.lastName !== undefined || data.firstName !== undefined) {
+  // 氏名(漢字/カナ)のいずれかが更新されたら、結合した name / nameKana を作り直す
+  const nameTouched = ['lastName', 'firstName', 'lastNameKana', 'firstNameKana'].some((k) => data[k] !== undefined);
+  if (nameTouched) {
     const existing: any = await prisma.customer.findUnique({ where: { id: req.params.id } });
-    const ln = data.lastName !== undefined ? data.lastName : existing?.lastName;
-    const fn = data.firstName !== undefined ? data.firstName : existing?.firstName;
-    const full = [ln, fn].filter(Boolean).join(' ');
-    if (full) data.name = full;
+    const pick = (k: string) => (data[k] !== undefined ? data[k] : existing?.[k]);
+    const kanji = [pick('lastName'), pick('firstName')].filter(Boolean).join(' ');
+    const kana = [pick('lastNameKana'), pick('firstNameKana')].filter(Boolean).join(' ');
+    if (kana) data.nameKana = kana;
+    const full = kanji || kana;
+    if (full) data.name = full; // 漢字があれば漢字、なければカナ
   }
   const customer = await prisma.customer.update({
     where: { id: req.params.id },
