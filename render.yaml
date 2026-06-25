@@ -41,8 +41,7 @@ services:
     name: remoria-link-web
     runtime: static
     rootDir: frontend
-    plan: free
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --include=dev && npm run build
     staticPublishPath: dist
     envVars:
       - key: VITE_API_BASE_URL
