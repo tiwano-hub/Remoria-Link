@@ -12,7 +12,8 @@ services:
     name: remoria-link-api
     runtime: node
     rootDir: backend
-    plan: free
+    # 常時起動(コールドスタートなし)のため有料プラン。無料に戻すと約15分でスリープする。
+    plan: starter
     # NODE_ENV=production だと npm が devDependencies(prisma/tsx) を省くため --include=dev を付ける
     buildCommand: npm install --include=dev && npx prisma generate && npm run build && npx prisma migrate deploy && npm run seed
     startCommand: npm run start
