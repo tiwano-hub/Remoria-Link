@@ -108,3 +108,73 @@ tr:hover td { background: #fafbfd; }
 .pill-tabs button { background: #eef2f8; color: var(--ink); }
 .pill-tabs button.active { background: var(--brand); color: #fff; }
 .signpad { border: 1px solid var(--line); border-radius: 8px; background: #fff; touch-action: none; }
+
+/* --- topbar menu controls (hidden on desktop) --- */
+.topbar-left { display: flex; align-items: center; gap: 10px; }
+.hamburger { display: none; }
+.topbar-brand { display: none; }
+.backdrop { display: none; }
+
+/* ============================================================
+   Mobile / responsive (smartphone-first usage)
+   ============================================================ */
+@media (max-width: 768px) {
+  /* Sidebar becomes a slide-in drawer */
+  .sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 60;
+    width: 250px; max-width: 82vw;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    overflow-y: auto;
+    box-shadow: 2px 0 18px rgba(0, 0, 0, .35);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar nav a, .sidebar .group { padding-top: 12px; padding-bottom: 12px; font-size: 15px; }
+
+  .backdrop {
+    display: block; position: fixed; inset: 0; z-index: 50;
+    background: rgba(0, 0, 0, .45);
+  }
+
+  /* Topbar: hamburger + brand on the left */
+  .topbar { height: 54px; padding: 0 12px; }
+  .hamburger {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; color: var(--ink); font-size: 24px; font-weight: 400;
+    padding: 4px 8px; line-height: 1; border-radius: 8px;
+  }
+  .hamburger:hover { background: #eef2f8; }
+  .topbar-brand { display: block; font-weight: 700; font-size: 16px; }
+  .topbar-brand span { color: var(--brand); }
+  .topbar .user { font-size: 12px; display: flex; align-items: center; gap: 6px; }
+  .user-name { display: none; }
+
+  /* Content breathing room */
+  .content { padding: 14px 12px; }
+  .card { padding: 14px; margin-bottom: 14px; }
+
+  /* Stack form layouts */
+  .grid2, .grid3 { grid-template-columns: 1fr; }
+  .grid4 { grid-template-columns: 1fr 1fr; }
+  .col { min-width: 0; flex-basis: 100%; }
+  .row { gap: 10px; }
+  .toolbar { gap: 8px; }
+
+  /* Avoid iOS auto-zoom on input focus (needs >=16px) */
+  input, select, textarea { font-size: 16px; }
+
+  /* Bigger tap targets */
+  button, .btn { padding: 11px 16px; }
+  .btn-sm { padding: 7px 12px; font-size: 12px; }
+
+  /* Wide data tables scroll horizontally instead of squishing */
+  .card table {
+    display: block; width: 100%;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  /* Login box fits the screen */
+  .center-screen { padding: 16px; }
+  .login-box { width: 100%; max-width: 360px; }
+}

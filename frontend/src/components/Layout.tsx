@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { ROLE_LABEL } from '../types';
@@ -26,17 +26,25 @@ const nav = [
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="app">
-      <aside className="sidebar">
+      {open && <div className="backdrop" onClick={() => setOpen(false)} />}
+      <aside className={`sidebar${open ? ' open' : ''}`}>
         <div className="logo">Remoria <span>Link</span></div>
         <nav>
           {nav.map((n, i) =>
             'group' in n ? (
               <div className="group" key={`g${i}`}>{n.group}</div>
             ) : (
-              <NavLink key={n.to} to={n.to!} className={({ isActive }) => (isActive ? 'active' : '')} end={n.to === '/cases'}>
+              <NavLink
+                key={n.to}
+                to={n.to!}
+                onClick={() => setOpen(false)}
+                className={({ isActive }) => (isActive ? 'active' : '')}
+                end={n.to === '/cases'}
+              >
                 {n.label}
               </NavLink>
             ),
@@ -45,9 +53,12 @@ export default function Layout({ children }: { children: ReactNode }) {
       </aside>
       <div className="main">
         <div className="topbar">
-          <div />
+          <div className="topbar-left">
+            <button className="hamburger" aria-label="メニュー" onClick={() => setOpen(true)}>☰</button>
+            <div className="topbar-brand">Remoria <span>Link</span></div>
+          </div>
           <div className="user">
-            {user?.name}（{user ? ROLE_LABEL[user.role] : ''}）
+            <span className="user-name">{user?.name}（{user ? ROLE_LABEL[user.role] : ''}）</span>
             {' '}
             <button className="btn-sub btn-sm" onClick={() => { logout(); navigate('/login'); }}>
               ログアウト
