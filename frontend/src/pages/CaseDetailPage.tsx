@@ -60,10 +60,7 @@ export default function CaseDetailPage() {
         {/* 顧客情報 */}
         <div className="card">
           <h3>顧客情報</h3>
-          <div><b>{c.customer.name}</b>（{c.customer.nameKana}）</div>
-          <div className="muted">{c.customer.customerType === 'REPEATER' ? 'リピーター' : '新規'}</div>
-          <div>{c.customer.phone}　{c.customer.email}</div>
-          <div>〒{c.customer.postalCode} {c.customer.prefecture}{c.customer.city}{c.customer.address} {c.customer.building}</div>
+          <CustomerEdit customer={c.customer} reload={load} />
         </div>
 
         {/* 案件情報 */}
@@ -149,68 +146,134 @@ function Kpi({ label, v }: { label: string; v: any }) {
   return <div className="kpi"><div className="label">{label}</div><div className="value">{v}</div></div>;
 }
 
+// ---------------- 顧客情報（インライン編集） ----------------
+function CustomerEdit({ customer, reload }: any) {
+  const save = async (patch: any) => { await api.put(`/api/customers/${customer.id}`, patch); reload(); };
+  const onEnter = (e: any) => { if (e.key === 'Enter') e.currentTarget.blur(); };
+  const txt = (k: string, label: string, required = false) => (
+    <Field label={label}>
+      <input
+        defaultValue={customer[k] || ''}
+        onKeyDown={onEnter}
+        onBlur={(e) => {
+          const v = e.target.value;
+          if (v === (customer[k] || '')) return; // 変更なしは保存しない
+          if (required && !v) return;            // 必須項目は空保存しない
+          save({ [k]: v });
+        }}
+      />
+    </Field>
+  );
+  return (
+    <div className="grid2">
+      {txt('name', '顧客名', true)}
+      {txt('nameKana', '顧客名カナ')}
+      {txt('phone', '電話番号', true)}
+      {txt('email', 'メールアドレス')}
+      {txt('postalCode', '郵便番号')}
+      {txt('prefecture', '都道府県')}
+      {txt('city', '市区町村')}
+      {txt('address', '住所')}
+      {txt('building', 'マンション名・部屋番号')}
+      <Field label="顧客種別">
+        <select defaultValue={customer.customerType} onChange={(e) => save({ customerType: e.target.value })}>
+          <option value="NEW">新規</option>
+          <option value="REPEATER">リピーター</option>
+        </select>
+      </Field>
+    </div>
+  );
+}
+
 // ---------------- 買取品明細 ----------------
 function ItemsTab({ c, channels, reload }: any) {
-  const [form, setForm] = useState<any>({ name: '', quantity: 1, grade: 'NONE', purchaseAmount: 0, expectedAmount: 0, salesChannel: '', note: '' });
-  const add = async () => {
-    await api.post('/api/items', { ...form, caseId: c.id, quantity: Number(form.quantity), purchaseAmount: Number(form.purchaseAmount), expectedAmount: Number(form.expectedAmount) });
-    setForm({ name: '', quantity: 1, grade: 'NONE', purchaseAmount: 0, expectedAmount: 0, salesChannel: '', note: '' });
-    reload();
-  };
-  const markLost = async (it: any) => {
-    const reason = prompt('失点理由を入力してください');
-    if (reason === null) return;
-    await api.post(`/api/items/${it.id}/lost`, { reason });
-    reload();
-  };
-  const addPhoto = async (it: any, forContract: boolean) => {
-    const file = await pickFile();
-    if (!file) return;
-    await api.post(`/api/items/${it.id}/photos`, { url: file, forContract });
+  return (
+    <div className="card">
+      <h3>買取品明細（金額はすべて税込）</h3>
+      {c.purchaseItems.length === 0 && <p className="muted">まだ買取品がありません。下の「明細を追加」から登録してください。</p>}
+      {c.purchaseItems.map((it: any) => (
+        <SavedItemRow key={it.id} it={it} channels={channels} reload={reload} />
+      ))}
+      <div className="divider" />
+      <h3>明細を追加</h3>
+      <NewItemRows caseId={c.id} channels={channels} reload={reload} />
+    </div>
+  );
+}
+
+// 登録済み明細：その場で編集（入力欄からフォーカスを外す or Enter で保存）
+function SavedItemRow({ it, channels, reload }: any) {
+  const save = async (patch: any) => { await api.put(`/api/items/${it.id}`, patch); reload(); };
+  const onEnter = (e: any) => { if (e.key === 'Enter') e.currentTarget.blur(); };
+  const saveNum = (k: string) => (e: any) => { const n = Number(e.target.value); if (!isNaN(n)) save({ [k]: n }); };
+  const markLost = async () => { const reason = prompt('失点理由を入力してください'); if (reason === null) return; await api.post(`/api/items/${it.id}/lost`, { reason }); reload(); };
+  const unLost = async () => { await api.post(`/api/items/${it.id}/unlost`); reload(); };
+  const del = async () => { if (!confirm('この明細を削除しますか？')) return; await api.del(`/api/items/${it.id}`); reload(); };
+  const addPhoto = async (forContract: boolean) => { const file = await pickFile(); if (!file) return; await api.post(`/api/items/${it.id}/photos`, { url: file, forContract }); reload(); };
+
+  return (
+    <div className="card" style={{ background: '#fafbfd', ...(it.isLost ? { opacity: 0.6 } : {}) }}>
+      {it.isLost && <span className="badge red" style={{ marginBottom: 6, display: 'inline-block' }}>失点：{it.lostReason}</span>}
+      <div className="grid4">
+        <Field label="商品名"><input defaultValue={it.name} onKeyDown={onEnter} onBlur={(e) => { if (e.target.value && e.target.value !== it.name) save({ name: e.target.value }); }} /></Field>
+        <Field label="数量"><input type="number" defaultValue={it.quantity} onKeyDown={onEnter} onBlur={saveNum('quantity')} /></Field>
+        <Field label="グレード"><select defaultValue={it.grade} onChange={(e) => save({ grade: e.target.value as Grade })}>{GRADES.map((g) => <option key={g} value={g}>{g === 'NONE' ? 'なし' : g}</option>)}</select></Field>
+        <Field label="販路（社内）"><select defaultValue={it.salesChannel || ''} onChange={(e) => save({ salesChannel: e.target.value })}><option value="">-</option>{channels.map((ch: any) => <option key={ch.name} value={ch.name}>{ch.name}</option>)}</select></Field>
+        <Field label="買取金額（税込）"><input type="number" defaultValue={it.purchaseAmount} onKeyDown={onEnter} onBlur={saveNum('purchaseAmount')} /></Field>
+        <Field label="見込金額（税込・社内）"><input type="number" defaultValue={it.expectedAmount} onKeyDown={onEnter} onBlur={saveNum('expectedAmount')} /></Field>
+        <Field label="備考"><input defaultValue={it.note || ''} onKeyDown={onEnter} onBlur={(e) => { if (e.target.value !== (it.note || '')) save({ note: e.target.value }); }} /></Field>
+      </div>
+      <div className="row" style={{ alignItems: 'center' }}>
+        <span className="muted" style={{ fontSize: 12 }}>
+          写真 {it.photos?.filter((p: any) => p.forContract).length || 0}/契約　{it.photos?.filter((p: any) => !p.forContract).length || 0}/社内
+        </span>
+        <button className="btn-sub btn-sm" onClick={() => addPhoto(true)}>契約用写真</button>
+        <button className="btn-sub btn-sm" onClick={() => addPhoto(false)}>社内用写真</button>
+        {it.isLost
+          ? <button className="btn-sub btn-sm" onClick={unLost}>失点解除</button>
+          : <button className="btn-danger btn-sm" onClick={markLost}>失点</button>}
+        <button className="btn-danger btn-sm" onClick={del}>削除</button>
+      </div>
+    </div>
+  );
+}
+
+const blankItem = () => ({ name: '', quantity: 1, grade: 'NONE', purchaseAmount: 0, expectedAmount: 0, salesChannel: '', note: '' });
+
+// 新規明細：1個目が未登録でも「行を追加」で複数行を同時に入力できる
+function NewItemRows({ caseId, channels, reload }: any) {
+  const [rows, setRows] = useState<any[]>([blankItem()]);
+  const upd = (i: number, k: string, v: any) => setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)));
+  const addRow = () => setRows((rs) => [...rs, blankItem()]);
+  const removeRow = (i: number) => setRows((rs) => { const next = rs.filter((_, idx) => idx !== i); return next.length ? next : [blankItem()]; });
+  const saveRow = async (i: number) => {
+    const r = rows[i];
+    await api.post('/api/items', { ...r, caseId, quantity: Number(r.quantity), purchaseAmount: Number(r.purchaseAmount), expectedAmount: Number(r.expectedAmount) });
+    removeRow(i);
     reload();
   };
 
   return (
-    <div className="card">
-      <h3>買取品明細（金額はすべて税込）</h3>
-      <table>
-        <thead>
-          <tr><th>商品名</th><th>数量</th><th>グレード</th><th className="num">買取金額</th><th className="num">見込金額 <Internal /></th><th>販路 <Internal /></th><th>写真</th><th></th></tr>
-        </thead>
-        <tbody>
-          {c.purchaseItems.map((it: any) => (
-            <tr key={it.id} style={it.isLost ? { opacity: 0.5 } : undefined}>
-              <td>{it.name}{it.isLost && <span className="badge red" style={{ marginLeft: 6 }}>失点</span>}</td>
-              <td>{it.quantity}</td>
-              <td>{it.grade}</td>
-              <td className="num">{yen(it.purchaseAmount)}</td>
-              <td className="num">{yen(it.expectedAmount)}</td>
-              <td>{it.salesChannel || '-'}</td>
-              <td>
-                {it.photos?.filter((p:any)=>p.forContract).length || 0}/契約　{it.photos?.filter((p:any)=>!p.forContract).length || 0}/社内
-                <div>
-                  <button className="btn-sub btn-sm" onClick={() => addPhoto(it, true)}>契約用</button>{' '}
-                  <button className="btn-sub btn-sm" onClick={() => addPhoto(it, false)}>社内用</button>
-                </div>
-              </td>
-              <td>{!it.isLost && <button className="btn-danger btn-sm" onClick={() => markLost(it)}>失点</button>}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="divider" />
-      <h3>明細を追加</h3>
-      <div className="grid4">
-        <Field label="商品名"><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
-        <Field label="数量"><input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} /></Field>
-        <Field label="グレード"><select value={form.grade} onChange={(e) => setForm({ ...form, grade: e.target.value as Grade })}>{GRADES.map((g) => <option key={g} value={g}>{g === 'NONE' ? 'なし' : g}</option>)}</select></Field>
-        <Field label="販路（社内）"><select value={form.salesChannel} onChange={(e) => setForm({ ...form, salesChannel: e.target.value })}><option value="">-</option>{channels.map((ch: any) => <option key={ch.name} value={ch.name}>{ch.name}</option>)}</select></Field>
-        <Field label="買取金額（税込）"><input type="number" value={form.purchaseAmount} onChange={(e) => setForm({ ...form, purchaseAmount: e.target.value })} /></Field>
-        <Field label="見込金額（税込・社内）"><input type="number" value={form.expectedAmount} onChange={(e) => setForm({ ...form, expectedAmount: e.target.value })} /></Field>
-        <Field label="備考"><input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></Field>
-      </div>
-      <button onClick={add} disabled={!form.name}>明細を追加</button>
-    </div>
+    <>
+      {rows.map((r, i) => (
+        <div key={i} className="card" style={{ background: '#fff' }}>
+          <div className="grid4">
+            <Field label="商品名"><input value={r.name} onChange={(e) => upd(i, 'name', e.target.value)} /></Field>
+            <Field label="数量"><input type="number" value={r.quantity} onChange={(e) => upd(i, 'quantity', e.target.value)} /></Field>
+            <Field label="グレード"><select value={r.grade} onChange={(e) => upd(i, 'grade', e.target.value as Grade)}>{GRADES.map((g) => <option key={g} value={g}>{g === 'NONE' ? 'なし' : g}</option>)}</select></Field>
+            <Field label="販路（社内）"><select value={r.salesChannel} onChange={(e) => upd(i, 'salesChannel', e.target.value)}><option value="">-</option>{channels.map((ch: any) => <option key={ch.name} value={ch.name}>{ch.name}</option>)}</select></Field>
+            <Field label="買取金額（税込）"><input type="number" value={r.purchaseAmount} onChange={(e) => upd(i, 'purchaseAmount', e.target.value)} /></Field>
+            <Field label="見込金額（税込・社内）"><input type="number" value={r.expectedAmount} onChange={(e) => upd(i, 'expectedAmount', e.target.value)} /></Field>
+            <Field label="備考"><input value={r.note} onChange={(e) => upd(i, 'note', e.target.value)} /></Field>
+          </div>
+          <div className="row">
+            <button onClick={() => saveRow(i)} disabled={!r.name}>この明細を登録</button>
+            {rows.length > 1 && <button className="btn-sub" onClick={() => removeRow(i)}>行を削除</button>}
+          </div>
+        </div>
+      ))}
+      <button className="btn-sub" onClick={addRow}>＋ 行を追加</button>
+    </>
   );
 }
 
