@@ -24,7 +24,10 @@ export default function CaseListPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2>案件一覧</h2>
-        <Link to="/intake"><button>新規案件（電話番号入力）</button></Link>
+        <div className="row">
+          <button className="btn-sub" onClick={() => api.download('/api/export/cases.csv', 'cases.csv').catch(() => {})}>CSV出力</button>
+          <Link to="/intake"><button>新規案件（電話番号入力）</button></Link>
+        </div>
       </div>
 
       <div className="card">

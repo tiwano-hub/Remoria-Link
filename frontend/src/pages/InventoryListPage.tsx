@@ -32,7 +32,10 @@ export default function InventoryListPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2>在庫一覧</h2>
-        <Link to="/inventory/new"><button>在庫登録</button></Link>
+        <div className="row">
+          <button className="btn-sub" onClick={() => api.download('/api/export/inventory.csv', 'inventory.csv').catch(() => {})}>CSV出力</button>
+          <Link to="/inventory/new"><button>在庫登録</button></Link>
+        </div>
       </div>
 
       <div className="card">

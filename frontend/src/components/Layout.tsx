@@ -21,6 +21,8 @@ const nav = [
   { to: '/users', label: 'ユーザー管理' },
   { to: '/masters', label: 'マスタ管理' },
   { to: '/audit-logs', label: '操作ログ' },
+  { group: 'ヘルプ' },
+  { to: '/help', label: '使い方・AIサポート' },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {

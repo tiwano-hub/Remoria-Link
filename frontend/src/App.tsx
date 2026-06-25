@@ -21,6 +21,7 @@ import SalesAnalyticsPage from './pages/SalesAnalyticsPage';
 import UsersPage from './pages/UsersPage';
 import MastersPage from './pages/MastersPage';
 import AuditLogsPage from './pages/AuditLogsPage';
+import HelpPage from './pages/HelpPage';
 
 function Protected({ children }: { children: JSX.Element }) {
   const { user, loading } = useAuth();
@@ -55,6 +56,7 @@ export default function App() {
       <Route path="/users" element={<Protected><UsersPage /></Protected>} />
       <Route path="/masters" element={<Protected><MastersPage /></Protected>} />
       <Route path="/audit-logs" element={<Protected><AuditLogsPage /></Protected>} />
+      <Route path="/help" element={<Protected><HelpPage /></Protected>} />
       <Route path="*" element={<Navigate to="/cases" replace />} />
     </Routes>
   );

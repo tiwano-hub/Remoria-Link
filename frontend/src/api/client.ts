@@ -44,4 +44,25 @@ export const api = {
   put: <T>(p: string, b?: unknown) => request<T>('PUT', p, b),
   del: <T>(p: string) => request<T>('DELETE', p),
   baseUrl: BASE,
+  download,
 };
+
+async function download(path: string, filename: string): Promise<void> {
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${BASE}${path}`, { headers });
+  if (!res.ok) {
+    let msg = `エラー (${res.status})`;
+    try { const d = await res.json(); msg = typeof d.error === 'string' ? d.error : msg; } catch { /* noop */ }
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}

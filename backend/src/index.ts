@@ -19,6 +19,8 @@ import userRoutes from './routes/users';
 import masterRoutes from './routes/masters';
 import auditRoutes from './routes/audit';
 import publicRoutes from './routes/public';
+import exportRoutes from './routes/export';
+import assistantRoutes from './routes/assistant';
 
 const app = express();
 
@@ -49,6 +51,8 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/masters', masterRoutes);
 app.use('/api/audit-logs', auditRoutes);
+app.use('/api/export', exportRoutes);
+app.use('/api/assistant', assistantRoutes);
 
 // エラーハンドラ
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
