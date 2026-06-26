@@ -382,6 +382,7 @@ model IdentityVerification {
   case           Case     @relation(fields: [caseId], references: [id])
   method         VerificationMethod
   documentType   IdDocumentType
+  documentNumber String?  // 身分証番号（対面時に控える。健康保険証・マイナンバーカードは控えない）
   imageUrl       String?  // 身分証画像
   verifiedAt     DateTime?
   verifierId     String?  // 確認担当者

@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma';
 import { audit } from '../services/audit';
 import { generateContractPdf } from '../services/pdf';
 import { ContractSnapshot } from '../services/contractSnapshot';
+import { safeDocNumber } from './identity';
 
 /**
  * 顧客向けの認証不要ルート（トークン経由）。
@@ -46,7 +47,8 @@ router.post('/contracts/:token/identity', async (req, res) => {
       'HEALTH_INSURANCE',
       'OTHER',
     ]),
-    imageUrl: z.string(),
+    documentNumber: z.string().nullish(),
+    imageUrl: z.string().nullish(),
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
@@ -61,16 +63,21 @@ router.post('/contracts/:token/identity', async (req, res) => {
   if (contract.case.purchaseMethod === 'DELIVERY' && parsed.data.method === 'FACE_TO_FACE') {
     return res.status(400).json({ error: '宅配（非対面）取引では対面確認は選択できません' });
   }
+  // 非対面（画像送信等）の方法では身分証画像が必須
+  if (parsed.data.method !== 'FACE_TO_FACE' && !parsed.data.imageUrl) {
+    return res.status(400).json({ error: 'この確認方法では身分証画像が必要です' });
+  }
 
   const rec = await prisma.identityVerification.create({
-    data: {
+    data: ({
       caseId: contract.caseId,
       method: parsed.data.method,
       documentType: parsed.data.documentType,
-      imageUrl: parsed.data.imageUrl,
+      documentNumber: safeDocNumber(parsed.data.documentType, parsed.data.documentNumber),
+      imageUrl: parsed.data.imageUrl ?? undefined,
       verifiedAt: new Date(),
       verificationLog: { source: 'customer', recordedAt: new Date().toISOString() },
-    },
+    } as any),
   });
   await audit(req, {
     action: 'IDENTITY_REGISTER',

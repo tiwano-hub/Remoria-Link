@@ -4,13 +4,16 @@ import { api } from '../api/client';
 import { yen } from '../lib/format';
 import { ID_DOCUMENT_LABEL, VERIFICATION_METHOD_LABEL } from '../types';
 
+// 番号を控えてはいけない身分証（健康保険証・マイナンバーカード）
+const NO_NUMBER_DOCS = ['HEALTH_INSURANCE', 'MY_NUMBER_CARD'];
+
 export default function SignPage() {
   const { token } = useParams();
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState('');
   const [step, setStep] = useState<'name' | 'review' | 'identity' | 'sign' | 'done'>('name');
   const [nameForm, setNameForm] = useState({ lastName: '', firstName: '' });
-  const [idForm, setIdForm] = useState<any>({ method: '', documentType: 'DRIVERS_LICENSE', imageUrl: '' });
+  const [idForm, setIdForm] = useState<any>({ method: '', documentType: 'DRIVERS_LICENSE', documentNumber: '', imageUrl: '' });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
 
@@ -61,8 +64,16 @@ export default function SignPage() {
     } catch (e: any) { setError(e.message); }
   };
   const submitIdentity = async () => {
+    const isFace = idForm.method === 'FACE_TO_FACE';
+    const noNumber = NO_NUMBER_DOCS.includes(idForm.documentType);
+    if (!isFace && !idForm.imageUrl) { setError('この確認方法では身分証画像が必要です'); return; }
     try {
-      await api.post(`/api/public/contracts/${token}/identity`, idForm);
+      await api.post(`/api/public/contracts/${token}/identity`, {
+        method: idForm.method,
+        documentType: idForm.documentType,
+        documentNumber: isFace && !noNumber ? (idForm.documentNumber || null) : null,
+        imageUrl: idForm.imageUrl || null,
+      });
       setStep('sign');
     } catch (e: any) { setError(e.message); }
   };
@@ -127,9 +138,22 @@ export default function SignPage() {
           <select value={idForm.documentType} onChange={(e) => setIdForm({ ...idForm, documentType: e.target.value })}>
             {Object.entries(ID_DOCUMENT_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
-          <label style={{ marginTop: 10 }}>身分証の画像</label>
-          <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files?.[0]; if (f) setIdForm({ ...idForm, imageUrl: await toDataUrl(f) }); }} />
-          <button style={{ marginTop: 12 }} onClick={submitIdentity} disabled={!idForm.imageUrl}>本人確認を送信</button>
+          {idForm.method === 'FACE_TO_FACE' ? (
+            NO_NUMBER_DOCS.includes(idForm.documentType) ? (
+              <p className="muted" style={{ marginTop: 10 }}>この身分証は番号を控えません。係員が内容を確認します。</p>
+            ) : (
+              <>
+                <label style={{ marginTop: 10 }}>身分証番号</label>
+                <input value={idForm.documentNumber} onChange={(e) => setIdForm({ ...idForm, documentNumber: e.target.value })} placeholder="免許証番号 等" />
+              </>
+            )
+          ) : (
+            <>
+              <label style={{ marginTop: 10 }}>身分証の画像</label>
+              <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files?.[0]; if (f) setIdForm({ ...idForm, imageUrl: await toDataUrl(f) }); }} />
+            </>
+          )}
+          <button style={{ marginTop: 12 }} onClick={submitIdentity} disabled={idForm.method !== 'FACE_TO_FACE' && !idForm.imageUrl}>本人確認を送信</button>
         </div>
       )}
 

@@ -339,11 +339,24 @@ function OptionsTab({ c, reload }: any) {
 }
 
 // ---------------- 本人確認 ----------------
+// 番号を控えてはいけない身分証（健康保険証・マイナンバーカード）
+const NO_NUMBER_DOCS = ['HEALTH_INSURANCE', 'MY_NUMBER_CARD'];
+
 function IdentityTab({ c, reload }: any) {
-  const [f, setF] = useState<any>({ method: c.purchaseMethod === 'DELIVERY' ? 'NONFACE_ID_IMAGE_PLUS' : 'FACE_TO_FACE', documentType: 'DRIVERS_LICENSE', imageUrl: '' });
+  const [f, setF] = useState<any>({ method: c.purchaseMethod === 'DELIVERY' ? 'NONFACE_ID_IMAGE_PLUS' : 'FACE_TO_FACE', documentType: 'DRIVERS_LICENSE', documentNumber: '', imageUrl: '' });
+  const isFace = f.method === 'FACE_TO_FACE';
+  const noNumber = NO_NUMBER_DOCS.includes(f.documentType);
+
   const submit = async () => {
-    await api.post('/api/identity', { ...f, caseId: c.id });
-    setF({ ...f, imageUrl: '' });
+    if (!isFace && !f.imageUrl) { alert('この確認方法では身分証画像が必要です'); return; }
+    await api.post('/api/identity', {
+      caseId: c.id,
+      method: f.method,
+      documentType: f.documentType,
+      documentNumber: isFace && !noNumber ? (f.documentNumber || null) : null,
+      imageUrl: f.imageUrl || null,
+    });
+    setF({ ...f, documentNumber: '', imageUrl: '' });
     reload();
   };
   const methods = c.purchaseMethod === 'DELIVERY'
@@ -354,16 +367,25 @@ function IdentityTab({ c, reload }: any) {
     <div className="card">
       <h3>本人確認（古物営業法準拠）</h3>
       {c.purchaseMethod === 'DELIVERY' && <p className="badge amber">宅配（非対面）取引：身分証画像のアップロードのみでは確認完了になりません。施行規則の方法を選択してください。</p>}
-      <table><thead><tr><th>確認方法</th><th>身分証種別</th><th>確認日時</th><th>画像</th></tr></thead>
+      {isFace && <p className="muted">対面確認：画像のアップロードは不要です。身分証番号を控えてください（健康保険証・マイナンバーカードは番号を控えません）。</p>}
+      <table><thead><tr><th>確認方法</th><th>身分証種別</th><th>番号</th><th>確認日時</th><th>画像</th></tr></thead>
         <tbody>{c.identity.map((iv: any) => (
-          <tr key={iv.id}><td>{VERIFICATION_METHOD_LABEL[iv.method]}</td><td>{ID_DOCUMENT_LABEL[iv.documentType]}</td><td>{datetime(iv.verifiedAt)}</td><td>{iv.imageUrl ? '登録済' : '-'}</td></tr>))}
-          {c.identity.length === 0 && <tr><td colSpan={4} className="muted">未登録</td></tr>}
+          <tr key={iv.id}><td>{VERIFICATION_METHOD_LABEL[iv.method]}</td><td>{ID_DOCUMENT_LABEL[iv.documentType]}</td><td>{iv.documentNumber || '-'}</td><td>{datetime(iv.verifiedAt)}</td><td>{iv.imageUrl ? '登録済' : '-'}</td></tr>))}
+          {c.identity.length === 0 && <tr><td colSpan={5} className="muted">未登録</td></tr>}
         </tbody></table>
       <div className="divider" />
       <div className="grid3">
         <Field label="確認方法"><select value={f.method} onChange={(e) => setF({ ...f, method: e.target.value })}>{methods.map((m) => <option key={m} value={m}>{VERIFICATION_METHOD_LABEL[m]}</option>)}</select></Field>
         <Field label="身分証種別"><select value={f.documentType} onChange={(e) => setF({ ...f, documentType: e.target.value })}>{Object.entries(ID_DOCUMENT_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
-        <Field label="身分証画像"><input type="file" accept="image/*" onChange={async (e) => { const file = e.target.files?.[0]; if (file) setF({ ...f, imageUrl: await toDataUrl(file) }); }} /></Field>
+        {isFace ? (
+          noNumber ? (
+            <Field label="身分証番号"><input value="" disabled placeholder="番号は控えません" /></Field>
+          ) : (
+            <Field label="身分証番号（控え）"><input value={f.documentNumber} onChange={(e) => setF({ ...f, documentNumber: e.target.value })} placeholder="免許証番号 等" /></Field>
+          )
+        ) : (
+          <Field label="身分証画像"><input type="file" accept="image/*" onChange={async (e) => { const file = e.target.files?.[0]; if (file) setF({ ...f, imageUrl: await toDataUrl(file) }); }} /></Field>
+        )}
       </div>
       <button onClick={submit}>本人確認を登録</button>
     </div>

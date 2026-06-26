@@ -28,10 +28,16 @@ const schema = z.object({
     'HEALTH_INSURANCE',
     'OTHER',
   ]),
+  documentNumber: z.string().nullish(),
   imageUrl: z.string().nullish(),
   verifiedAt: z.string().nullish(),
   verificationLog: z.any().optional(),
 });
+
+// 番号を控えてはいけない身分証（健康保険証・マイナンバーカード）
+const NO_NUMBER_DOCS = ['HEALTH_INSURANCE', 'MY_NUMBER_CARD'];
+export const safeDocNumber = (docType: string, num?: string | null) =>
+  NO_NUMBER_DOCS.includes(docType) ? null : num || null;
 
 // 顧客署名画面など認証なしでも登録できるよう、token 経由は別途 public ルートで扱う
 router.use(authenticate);
@@ -48,10 +54,11 @@ router.post('/', denyViewer, async (req, res) => {
   }
 
   const rec = await prisma.identityVerification.create({
-    data: {
+    data: ({
       caseId: parsed.data.caseId,
       method: parsed.data.method,
       documentType: parsed.data.documentType,
+      documentNumber: safeDocNumber(parsed.data.documentType, parsed.data.documentNumber),
       imageUrl: parsed.data.imageUrl ?? undefined,
       verifiedAt: parsed.data.verifiedAt ? new Date(parsed.data.verifiedAt) : new Date(),
       verifierId: req.user!.id,
@@ -60,7 +67,7 @@ router.post('/', denyViewer, async (req, res) => {
         verifierName: req.user!.name,
         recordedAt: new Date().toISOString(),
       },
-    },
+    } as any),
   });
 
   await audit(req, {
