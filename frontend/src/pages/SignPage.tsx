@@ -6,6 +6,10 @@ import { ID_DOCUMENT_LABEL, VERIFICATION_METHOD_LABEL } from '../types';
 
 // 番号を控えてはいけない身分証（健康保険証・マイナンバーカード）
 const NO_NUMBER_DOCS = ['HEALTH_INSURANCE', 'MY_NUMBER_CARD'];
+// 遠隔（非対面）取引：身分証画像が必須
+const REMOTE_METHODS = ['DELIVERY', 'CONSIGNMENT'];
+// 表裏の画像が必要な身分証
+const NEEDS_BACK_DOCS = ['DRIVERS_LICENSE', 'HEALTH_INSURANCE'];
 
 export default function SignPage() {
   const { token } = useParams();
@@ -13,7 +17,7 @@ export default function SignPage() {
   const [error, setError] = useState('');
   const [step, setStep] = useState<'name' | 'review' | 'identity' | 'sign' | 'done'>('name');
   const [nameForm, setNameForm] = useState({ lastName: '', firstName: '' });
-  const [idForm, setIdForm] = useState<any>({ method: '', documentType: 'DRIVERS_LICENSE', documentNumber: '', imageUrl: '' });
+  const [idForm, setIdForm] = useState<any>({ method: '', documentType: 'DRIVERS_LICENSE', documentNumber: '', imageUrl: '', imageUrlBack: '' });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
 
@@ -22,8 +26,8 @@ export default function SignPage() {
 
   useEffect(() => {
     if (data && step === 'review') {
-      const delivery = data.snapshot?.purchaseMethod === 'DELIVERY';
-      setIdForm((f: any) => ({ ...f, method: delivery ? 'NONFACE_ID_IMAGE_PLUS' : 'FACE_TO_FACE' }));
+      const remote = REMOTE_METHODS.includes(data.snapshot?.purchaseMethod);
+      setIdForm((f: any) => ({ ...f, method: remote ? 'NONFACE_ID_IMAGE_PLUS' : 'FACE_TO_FACE' }));
     }
   }, [data, step]);
 
@@ -66,13 +70,18 @@ export default function SignPage() {
   const submitIdentity = async () => {
     const isFace = idForm.method === 'FACE_TO_FACE';
     const noNumber = NO_NUMBER_DOCS.includes(idForm.documentType);
-    if (!isFace && !idForm.imageUrl) { setError('この確認方法では身分証画像が必要です'); return; }
+    const needsBack = NEEDS_BACK_DOCS.includes(idForm.documentType);
+    if (!isFace) {
+      if (!idForm.imageUrl) { setError('身分証画像（表）が必要です'); return; }
+      if (needsBack && !idForm.imageUrlBack) { setError('この身分証は表と裏の両面の画像が必要です'); return; }
+    }
     try {
       await api.post(`/api/public/contracts/${token}/identity`, {
         method: idForm.method,
         documentType: idForm.documentType,
         documentNumber: isFace && !noNumber ? (idForm.documentNumber || null) : null,
         imageUrl: idForm.imageUrl || null,
+        imageUrlBack: idForm.imageUrlBack || null,
       });
       setStep('sign');
     } catch (e: any) { setError(e.message); }
@@ -86,7 +95,7 @@ export default function SignPage() {
     } catch (e: any) { setError(e.message); }
   };
 
-  const delivery = s?.purchaseMethod === 'DELIVERY';
+  const delivery = REMOTE_METHODS.includes(s?.purchaseMethod);
   const methods = delivery
     ? ['NONFACE_REGISTERED_MAIL', 'NONFACE_ID_IMAGE_PLUS', 'NONFACE_IC_CHIP', 'NONFACE_E_SIGNATURE']
     : Object.keys(VERIFICATION_METHOD_LABEL);
@@ -129,7 +138,7 @@ export default function SignPage() {
       {step === 'identity' && (
         <div className="card">
           <h3>本人確認</h3>
-          {delivery && <p className="badge amber">宅配のお取引では、画像送信に加え法令に定める方法での確認が必要です。</p>}
+          {delivery && <p className="badge amber">宅配・委託（遠隔）のお取引では、身分証画像が必要です（免許証・健康保険証は表裏の両面）。</p>}
           <label>確認方法</label>
           <select value={idForm.method} onChange={(e) => setIdForm({ ...idForm, method: e.target.value })}>
             {methods.map((m) => <option key={m} value={m}>{VERIFICATION_METHOD_LABEL[m]}</option>)}
@@ -149,8 +158,14 @@ export default function SignPage() {
             )
           ) : (
             <>
-              <label style={{ marginTop: 10 }}>身分証の画像</label>
-              <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files?.[0]; if (f) setIdForm({ ...idForm, imageUrl: await toDataUrl(f) }); }} />
+              <label style={{ marginTop: 10 }}>{NEEDS_BACK_DOCS.includes(idForm.documentType) ? '身分証の画像（表）' : '身分証の画像'}</label>
+              <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await toDataUrl(f); setIdForm((p: any) => ({ ...p, imageUrl: url })); } }} />
+              {NEEDS_BACK_DOCS.includes(idForm.documentType) && (
+                <>
+                  <label style={{ marginTop: 10 }}>身分証の画像（裏）</label>
+                  <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await toDataUrl(f); setIdForm((p: any) => ({ ...p, imageUrlBack: url })); } }} />
+                </>
+              )}
             </>
           )}
           <button style={{ marginTop: 12 }} onClick={submitIdentity} disabled={idForm.method !== 'FACE_TO_FACE' && !idForm.imageUrl}>本人確認を送信</button>

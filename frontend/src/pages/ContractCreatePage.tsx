@@ -44,7 +44,7 @@ export default function ContractCreatePage() {
         <h3>古物売買契約書（プレビュー）</h3>
         <div><b>お客様：</b>{c.customer.name} 様</div>
         <div>{c.customer.prefecture}{c.customer.city}{c.customer.address} {c.customer.building}</div>
-        <div><b>買取方法：</b>{({ VISIT: '出張', DELIVERY: '宅配', STORE: '店頭' } as any)[c.purchaseMethod] || '-'}</div>
+        <div><b>買取方法：</b>{({ VISIT: '出張', DELIVERY: '宅配', STORE: '店頭', CONSIGNMENT: '委託' } as any)[c.purchaseMethod] || '-'}</div>
         <table style={{ marginTop: 10 }}>
           <thead><tr><th>商品名</th><th>数量</th><th>グレード</th><th className="num">買取金額(税込)</th></tr></thead>
           <tbody>

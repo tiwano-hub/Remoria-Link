@@ -14,7 +14,7 @@ export type CaseStatus =
   | 'INQUIRY' | 'RESERVED' | 'APPRAISING' | 'APPROVED'
   | 'EXECUTED' | 'COMPLETED' | 'CONSIDERING' | 'CANCELLED';
 
-export type PurchaseMethod = 'VISIT' | 'DELIVERY' | 'STORE';
+export type PurchaseMethod = 'VISIT' | 'DELIVERY' | 'STORE' | 'CONSIGNMENT';
 export type Grade = 'N' | 'S' | 'A' | 'B' | 'C' | 'D' | 'E' | 'J' | 'NONE';
 export type AppointmentRank = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
 
@@ -24,8 +24,13 @@ export const CASE_STATUS_LABEL: Record<CaseStatus, string> = {
 };
 
 export const PURCHASE_METHOD_LABEL: Record<PurchaseMethod, string> = {
-  VISIT: '出張', DELIVERY: '宅配', STORE: '店頭',
+  VISIT: '出張', DELIVERY: '宅配', STORE: '店頭', CONSIGNMENT: '委託',
 };
+
+// 遠隔（非対面）取引：身分証画像が必須
+export const REMOTE_METHODS = ['DELIVERY', 'CONSIGNMENT'];
+// 表裏の画像が必要な身分証
+export const NEEDS_BACK_DOCS = ['DRIVERS_LICENSE', 'HEALTH_INSURANCE'];
 
 export const INVENTORY_STATUS_LABEL: Record<string, string> = {
   IN_STOCK: '在庫中', LISTED: '出品中', SOLD: '販売済',

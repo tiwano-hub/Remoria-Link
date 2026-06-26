@@ -6,6 +6,7 @@ import { audit } from '../services/audit';
 import { generateContractPdf } from '../services/pdf';
 import { ContractSnapshot } from '../services/contractSnapshot';
 import { safeDocNumber } from './identity';
+import { REMOTE_METHODS, NEEDS_BACK_DOCS } from '../constants';
 
 /**
  * 顧客向けの認証不要ルート（トークン経由）。
@@ -49,6 +50,7 @@ router.post('/contracts/:token/identity', async (req, res) => {
     ]),
     documentNumber: z.string().nullish(),
     imageUrl: z.string().nullish(),
+    imageUrlBack: z.string().nullish(),
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
@@ -59,13 +61,15 @@ router.post('/contracts/:token/identity', async (req, res) => {
   });
   if (!contract) return res.status(404).json({ error: '契約書が見つかりません' });
 
-  // 非対面取引で画像のみは不可
-  if (contract.case.purchaseMethod === 'DELIVERY' && parsed.data.method === 'FACE_TO_FACE') {
-    return res.status(400).json({ error: '宅配（非対面）取引では対面確認は選択できません' });
+  // 遠隔（宅配・委託）取引で対面確認は不可
+  if (REMOTE_METHODS.includes(contract.case.purchaseMethod || '') && parsed.data.method === 'FACE_TO_FACE') {
+    return res.status(400).json({ error: '宅配・委託（遠隔）取引では対面確認は選択できません' });
   }
-  // 非対面（画像送信等）の方法では身分証画像が必須
-  if (parsed.data.method !== 'FACE_TO_FACE' && !parsed.data.imageUrl) {
-    return res.status(400).json({ error: 'この確認方法では身分証画像が必要です' });
+  // 非対面（画像送信等）の方法では身分証画像が必須（免許証・健康保険証は表裏）
+  if (parsed.data.method !== 'FACE_TO_FACE') {
+    if (!parsed.data.imageUrl) return res.status(400).json({ error: 'この確認方法では身分証画像（表）が必要です' });
+    if (NEEDS_BACK_DOCS.includes(parsed.data.documentType) && !parsed.data.imageUrlBack)
+      return res.status(400).json({ error: 'この身分証は表と裏の両面の画像が必要です' });
   }
 
   const rec = await prisma.identityVerification.create({
@@ -75,6 +79,7 @@ router.post('/contracts/:token/identity', async (req, res) => {
       documentType: parsed.data.documentType,
       documentNumber: safeDocNumber(parsed.data.documentType, parsed.data.documentNumber),
       imageUrl: parsed.data.imageUrl ?? undefined,
+      imageUrlBack: parsed.data.imageUrlBack ?? undefined,
       verifiedAt: new Date(),
       verificationLog: { source: 'customer', recordedAt: new Date().toISOString() },
     } as any),

@@ -34,9 +34,10 @@ enum CaseStatus {
 }
 
 enum PurchaseMethod {
-  VISIT     // 出張
-  DELIVERY  // 宅配
-  STORE     // 店頭
+  VISIT       // 出張
+  DELIVERY    // 宅配
+  STORE       // 店頭
+  CONSIGNMENT // 委託
 }
 
 enum AppointmentRank {
@@ -383,7 +384,8 @@ model IdentityVerification {
   method         VerificationMethod
   documentType   IdDocumentType
   documentNumber String?  // 身分証番号（対面時に控える。健康保険証・マイナンバーカードは控えない）
-  imageUrl       String?  // 身分証画像
+  imageUrl       String?  // 身分証画像（表）
+  imageUrlBack   String?  // 身分証画像（裏。免許証・健康保険証で使用）
   verifiedAt     DateTime?
   verifierId     String?  // 確認担当者
   verificationLog Json?   // 確認ログ

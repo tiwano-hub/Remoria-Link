@@ -127,7 +127,7 @@ export default function CaseFormPage() {
           </Field>
           <Field label="買取方法">
             <select value={cs.purchaseMethod} onChange={sf('purchaseMethod')}>
-              <option value="VISIT">出張</option><option value="DELIVERY">宅配</option><option value="STORE">店頭</option>
+              <option value="VISIT">出張</option><option value="DELIVERY">宅配</option><option value="STORE">店頭</option><option value="CONSIGNMENT">委託</option>
             </select>
           </Field>
           <Field label="アポランク">

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { authenticate, denyViewer } from '../middleware/auth';
 import { audit } from '../services/audit';
+import { REMOTE_METHODS, NEEDS_BACK_DOCS } from '../constants';
 
 const router = Router();
 
@@ -30,6 +31,7 @@ const schema = z.object({
   ]),
   documentNumber: z.string().nullish(),
   imageUrl: z.string().nullish(),
+  imageUrlBack: z.string().nullish(),
   verifiedAt: z.string().nullish(),
   verificationLog: z.any().optional(),
 });
@@ -48,9 +50,15 @@ router.post('/', denyViewer, async (req, res) => {
   const c = await prisma.case.findUnique({ where: { id: parsed.data.caseId } });
   if (!c) return res.status(404).json({ error: '案件が見つかりません' });
 
-  // 非対面（宅配）で画像のみは不可のチェック
-  if (c.purchaseMethod === 'DELIVERY' && parsed.data.method === 'FACE_TO_FACE') {
-    return res.status(400).json({ error: '宅配（非対面）取引では対面確認は選択できません' });
+  // 遠隔（宅配・委託）取引は対面確認を選べない／画像が必須
+  const remote = REMOTE_METHODS.includes(c.purchaseMethod || '');
+  if (remote && parsed.data.method === 'FACE_TO_FACE') {
+    return res.status(400).json({ error: '宅配・委託（遠隔）取引では対面確認は選択できません' });
+  }
+  if (parsed.data.method !== 'FACE_TO_FACE') {
+    if (!parsed.data.imageUrl) return res.status(400).json({ error: 'この確認方法では身分証画像（表）が必要です' });
+    if (NEEDS_BACK_DOCS.includes(parsed.data.documentType) && !parsed.data.imageUrlBack)
+      return res.status(400).json({ error: 'この身分証は表と裏の両面の画像が必要です' });
   }
 
   const rec = await prisma.identityVerification.create({
@@ -60,6 +68,7 @@ router.post('/', denyViewer, async (req, res) => {
       documentType: parsed.data.documentType,
       documentNumber: safeDocNumber(parsed.data.documentType, parsed.data.documentNumber),
       imageUrl: parsed.data.imageUrl ?? undefined,
+      imageUrlBack: parsed.data.imageUrlBack ?? undefined,
       verifiedAt: parsed.data.verifiedAt ? new Date(parsed.data.verifiedAt) : new Date(),
       verifierId: req.user!.id,
       verificationLog: {

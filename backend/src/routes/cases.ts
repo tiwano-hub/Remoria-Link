@@ -41,7 +41,7 @@ const caseFields = z.object({
   status: z
     .enum(['INQUIRY', 'RESERVED', 'APPRAISING', 'APPROVED', 'EXECUTED', 'COMPLETED', 'CONSIDERING', 'CANCELLED'])
     .optional(),
-  purchaseMethod: z.enum(['VISIT', 'DELIVERY', 'STORE']).nullish(),
+  purchaseMethod: z.enum(['VISIT', 'DELIVERY', 'STORE', 'CONSIGNMENT']).nullish(),
   referralSource: z.string().nullish(),
   appointmentRank: z.enum(['A', 'B', 'C', 'D', 'E', 'F']).nullish(),
   internalMemo: z.string().nullish(),
@@ -90,7 +90,7 @@ router.post('/', denyViewer, async (req, res) => {
       appraisalHours: cf.appraisalHours ?? undefined,
       workHours: cf.workHours ?? undefined,
       status: cf.status ?? 'INQUIRY',
-      purchaseMethod: cf.purchaseMethod ?? undefined,
+      purchaseMethod: (cf.purchaseMethod ?? undefined) as any,
       referralSource: cf.referralSource ?? undefined,
       appointmentRank: cf.appointmentRank ?? undefined,
       internalMemo: cf.internalMemo ?? undefined,
@@ -198,7 +198,7 @@ router.put('/:id', denyViewer, async (req, res) => {
       appraisalHours: cf.appraisalHours === undefined ? undefined : cf.appraisalHours,
       workHours: cf.workHours === undefined ? undefined : cf.workHours,
       status: cf.status,
-      purchaseMethod: cf.purchaseMethod === undefined ? undefined : cf.purchaseMethod,
+      purchaseMethod: (cf.purchaseMethod === undefined ? undefined : cf.purchaseMethod) as any,
       referralSource: cf.referralSource === undefined ? undefined : cf.referralSource,
       appointmentRank: cf.appointmentRank === undefined ? undefined : cf.appointmentRank,
       internalMemo: cf.internalMemo === undefined ? undefined : cf.internalMemo,

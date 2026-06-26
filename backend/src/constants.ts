@@ -16,7 +16,13 @@ export const PURCHASE_METHOD_LABEL: Record<string, string> = {
   VISIT: '出張',
   DELIVERY: '宅配',
   STORE: '店頭',
+  CONSIGNMENT: '委託',
 };
+
+// 遠隔（非対面）取引：身分証画像が必須
+export const REMOTE_METHODS = ['DELIVERY', 'CONSIGNMENT'];
+// 表裏の画像が必要な身分証
+export const NEEDS_BACK_DOCS = ['DRIVERS_LICENSE', 'HEALTH_INSURANCE'];
 
 export const ROLE_LABEL: Record<string, string> = {
   ADMIN: '管理者',

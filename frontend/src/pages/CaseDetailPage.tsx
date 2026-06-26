@@ -341,36 +341,46 @@ function OptionsTab({ c, reload }: any) {
 // ---------------- 本人確認 ----------------
 // 番号を控えてはいけない身分証（健康保険証・マイナンバーカード）
 const NO_NUMBER_DOCS = ['HEALTH_INSURANCE', 'MY_NUMBER_CARD'];
+// 遠隔（非対面）取引：身分証画像が必須
+const REMOTE_METHODS = ['DELIVERY', 'CONSIGNMENT'];
+// 表裏の画像が必要な身分証
+const NEEDS_BACK_DOCS = ['DRIVERS_LICENSE', 'HEALTH_INSURANCE'];
 
 function IdentityTab({ c, reload }: any) {
-  const [f, setF] = useState<any>({ method: c.purchaseMethod === 'DELIVERY' ? 'NONFACE_ID_IMAGE_PLUS' : 'FACE_TO_FACE', documentType: 'DRIVERS_LICENSE', documentNumber: '', imageUrl: '' });
+  const isRemote = REMOTE_METHODS.includes(c.purchaseMethod);
+  const [f, setF] = useState<any>({ method: isRemote ? 'NONFACE_ID_IMAGE_PLUS' : 'FACE_TO_FACE', documentType: 'DRIVERS_LICENSE', documentNumber: '', imageUrl: '', imageUrlBack: '' });
   const isFace = f.method === 'FACE_TO_FACE';
   const noNumber = NO_NUMBER_DOCS.includes(f.documentType);
+  const needsBack = NEEDS_BACK_DOCS.includes(f.documentType);
 
   const submit = async () => {
-    if (!isFace && !f.imageUrl) { alert('この確認方法では身分証画像が必要です'); return; }
+    if (!isFace) {
+      if (!f.imageUrl) { alert('身分証画像（表）が必要です'); return; }
+      if (needsBack && !f.imageUrlBack) { alert('この身分証は表と裏の両面の画像が必要です'); return; }
+    }
     await api.post('/api/identity', {
       caseId: c.id,
       method: f.method,
       documentType: f.documentType,
       documentNumber: isFace && !noNumber ? (f.documentNumber || null) : null,
       imageUrl: f.imageUrl || null,
+      imageUrlBack: f.imageUrlBack || null,
     });
-    setF({ ...f, documentNumber: '', imageUrl: '' });
+    setF({ ...f, documentNumber: '', imageUrl: '', imageUrlBack: '' });
     reload();
   };
-  const methods = c.purchaseMethod === 'DELIVERY'
+  const methods = isRemote
     ? ['NONFACE_REGISTERED_MAIL', 'NONFACE_ID_IMAGE_PLUS', 'NONFACE_IC_CHIP', 'NONFACE_E_SIGNATURE']
     : Object.keys(VERIFICATION_METHOD_LABEL);
 
   return (
     <div className="card">
       <h3>本人確認（古物営業法準拠）</h3>
-      {c.purchaseMethod === 'DELIVERY' && <p className="badge amber">宅配（非対面）取引：身分証画像のアップロードのみでは確認完了になりません。施行規則の方法を選択してください。</p>}
+      {isRemote && <p className="badge amber">宅配・委託（遠隔）取引：身分証画像が必須です（免許証・健康保険証は表裏の両面）。</p>}
       {isFace && <p className="muted">対面確認：画像のアップロードは不要です。身分証番号を控えてください（健康保険証・マイナンバーカードは番号を控えません）。</p>}
       <table><thead><tr><th>確認方法</th><th>身分証種別</th><th>番号</th><th>確認日時</th><th>画像</th></tr></thead>
         <tbody>{c.identity.map((iv: any) => (
-          <tr key={iv.id}><td>{VERIFICATION_METHOD_LABEL[iv.method]}</td><td>{ID_DOCUMENT_LABEL[iv.documentType]}</td><td>{iv.documentNumber || '-'}</td><td>{datetime(iv.verifiedAt)}</td><td>{iv.imageUrl ? '登録済' : '-'}</td></tr>))}
+          <tr key={iv.id}><td>{VERIFICATION_METHOD_LABEL[iv.method]}</td><td>{ID_DOCUMENT_LABEL[iv.documentType]}</td><td>{iv.documentNumber || '-'}</td><td>{datetime(iv.verifiedAt)}</td><td>{iv.imageUrl ? (iv.imageUrlBack ? '表裏' : '表') : '-'}</td></tr>))}
           {c.identity.length === 0 && <tr><td colSpan={5} className="muted">未登録</td></tr>}
         </tbody></table>
       <div className="divider" />
@@ -384,7 +394,10 @@ function IdentityTab({ c, reload }: any) {
             <Field label="身分証番号（控え）"><input value={f.documentNumber} onChange={(e) => setF({ ...f, documentNumber: e.target.value })} placeholder="免許証番号 等" /></Field>
           )
         ) : (
-          <Field label="身分証画像"><input type="file" accept="image/*" onChange={async (e) => { const file = e.target.files?.[0]; if (file) setF({ ...f, imageUrl: await toDataUrl(file) }); }} /></Field>
+          <>
+            <Field label={needsBack ? '身分証画像（表）' : '身分証画像'}><input type="file" accept="image/*" onChange={async (e) => { const file = e.target.files?.[0]; if (file) { const url = await toDataUrl(file); setF((p: any) => ({ ...p, imageUrl: url })); } }} /></Field>
+            {needsBack && <Field label="身分証画像（裏）"><input type="file" accept="image/*" onChange={async (e) => { const file = e.target.files?.[0]; if (file) { const url = await toDataUrl(file); setF((p: any) => ({ ...p, imageUrlBack: url })); } }} /></Field>}
+          </>
         )}
       </div>
       <button onClick={submit}>本人確認を登録</button>
