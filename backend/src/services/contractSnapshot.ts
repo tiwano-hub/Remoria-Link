@@ -45,8 +45,8 @@ export async function buildContractSnapshot(caseId: string): Promise<ContractSna
 
   const totals = calcCaseTotals(c.purchaseItems, c.caseOptions, c.costOptions);
 
-  // 失点明細・非表示明細を除外
-  const visibleItems = c.purchaseItems.filter((i) => !i.isLost && i.showOnContract);
+  // 失点明細のみ除外（買取する明細は契約書に必ず記載＝金額計算と一致させる）
+  const visibleItems = c.purchaseItems.filter((i) => !i.isLost);
   const visibleOptions = c.caseOptions.filter((o) => o.showOnContract);
 
   const address = [c.customer.postalCode ? `〒${c.customer.postalCode}` : '', c.customer.prefecture, c.customer.city, c.customer.address, c.customer.building]

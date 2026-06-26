@@ -19,7 +19,7 @@ export default function ContractCreatePage() {
   if (error) return <div className="error">{error}</div>;
   if (!c) return <div className="muted">読み込み中...</div>;
 
-  const visibleItems = c.purchaseItems.filter((i: any) => !i.isLost && i.showOnContract);
+  const visibleItems = c.purchaseItems.filter((i: any) => !i.isLost);
   const t = c.totals;
 
   const create = async () => {

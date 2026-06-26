@@ -63,7 +63,7 @@ router.post('/:id/lost', denyViewer, async (req, res) => {
 router.post('/:id/unlost', denyViewer, async (req, res) => {
   const item = await prisma.purchaseItem.update({
     where: { id: req.params.id },
-    data: { isLost: false, lostReason: null },
+    data: { isLost: false, lostReason: null, showOnContract: true },
   });
   res.json(item);
 });
