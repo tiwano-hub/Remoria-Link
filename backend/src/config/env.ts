@@ -13,6 +13,8 @@ export const env = {
   appPublicUrl: process.env.APP_PUBLIC_URL || 'http://localhost:5173',
   // 本番で簡易ログイン（メールのみ）を許可するか。Google認証設定前の初期アクセス用。
   allowSimpleLogin: process.env.ALLOW_SIMPLE_LOGIN === 'true',
+  // 一時的にログインを停止する（メンテナンス等）。true の間は全ログインを拒否。
+  loginDisabled: process.env.LOGIN_DISABLED === 'true',
 };
 
 export const isProd = env.nodeEnv === 'production';

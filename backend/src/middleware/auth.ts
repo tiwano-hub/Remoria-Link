@@ -26,6 +26,10 @@ export function signSession(user: AuthUser): string {
 
 /** Authorization: Bearer <jwt> または cookie からセッションを読む */
 export function authenticate(req: Request, res: Response, next: NextFunction) {
+  // 一時停止中は既存トークンでもアクセスを拒否（完全ロック）
+  if (env.loginDisabled) {
+    return res.status(403).json({ error: 'ただいまシステムを一時停止しています。' });
+  }
   const header = req.headers.authorization;
   const token = header?.startsWith('Bearer ')
     ? header.slice(7)

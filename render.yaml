@@ -30,6 +30,9 @@ services:
       # 運用開始後は false にして Google 認証へ切り替えてください。
       - key: ALLOW_SIMPLE_LOGIN
         value: "true"
+      # 一時的にログインを停止する（再開時に "false" にする）
+      - key: LOGIN_DISABLED
+        value: "true"
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET

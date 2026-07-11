@@ -8,12 +8,20 @@ import { audit } from '../services/audit';
 const router = Router();
 const oauth = new OAuth2Client(env.googleClientId);
 
+// 一時停止中は全ログインを拒否する
+const blockIfLoginDisabled = (_req: any, res: any, next: any) => {
+  if (env.loginDisabled) {
+    return res.status(403).json({ error: 'ただいまシステムを一時停止しています。ログインはできません。' });
+  }
+  next();
+};
+
 /**
  * POST /api/auth/google
  * body: { credential } = Google Identity Services が返す ID トークン
  * 検証後、未登録メールは VIEWER として作成（初回のみ）。最初のユーザーは ADMIN。
  */
-router.post('/google', async (req, res) => {
+router.post('/google', blockIfLoginDisabled, async (req, res) => {
   const { credential } = req.body as { credential?: string };
   if (!credential) return res.status(400).json({ error: 'credential がありません' });
   try {
@@ -70,7 +78,7 @@ router.post('/google', async (req, res) => {
  * ※本番で有効にするのは Google 認証設定前の初期アクセス用。運用開始後は
  *   ALLOW_SIMPLE_LOGIN を未設定（無効）にし、Google 認証へ切り替えてください。
  */
-router.post('/dev-login', async (req, res) => {
+router.post('/dev-login', blockIfLoginDisabled, async (req, res) => {
   if (env.nodeEnv === 'production' && !env.allowSimpleLogin) {
     return res.status(403).json({ error: '簡易ログインは無効です（管理者にお問い合わせください）' });
   }
