@@ -17,10 +17,8 @@ export default function InventoryDetailPage() {
   const { id } = useParams();
   const [inv, setInv] = useState<any>(null);
   const [error, setError] = useState('');
-  const [sale, setSale] = useState<any>({
-    soldDate: '', paidDate: '', salesAmount: 0, fee: 0, shipping: 0,
-    otherCost: 0, buyer: '', note: '',
-  });
+  const [channels, setChannels] = useState<{ name: string }[]>([]);
+  const [sale, setSale] = useState<any>({ soldDate: '', salesAmount: 0, channel: '' });
   const [saleError, setSaleError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -29,6 +27,9 @@ export default function InventoryDetailPage() {
   }, [id]);
 
   useEffect(load, [load]);
+  useEffect(() => {
+    api.get<any>('/api/masters').then((m) => setChannels(m.channels || [])).catch(() => {});
+  }, []);
 
   if (error) return <div className="error">{error}</div>;
   if (!inv) return <div className="muted">読み込み中...</div>;
@@ -50,19 +51,15 @@ export default function InventoryDetailPage() {
     setSaleError('');
     setSaving(true);
     try {
+      const channel = sale.channel || inv.salesChannel || undefined;
       await api.post('/api/sales', {
         inventoryId: id,
         soldDate: sale.soldDate,
-        paidDate: sale.paidDate || undefined,
         salesAmount: Number(sale.salesAmount),
-        fee: Number(sale.fee),
-        shipping: Number(sale.shipping),
-        otherCost: Number(sale.otherCost),
-        salesChannel: inv.salesChannel,
-        buyer: sale.buyer || undefined,
-        note: sale.note || undefined,
+        salesChannel: channel,
+        buyer: channel, // 販売先＝販路
       });
-      setSale({ soldDate: '', paidDate: '', salesAmount: 0, fee: 0, shipping: 0, otherCost: 0, buyer: '', note: '' });
+      setSale({ soldDate: '', salesAmount: 0, channel: '' });
       load();
     } catch (e: any) {
       setSaleError(e.message);
@@ -128,15 +125,18 @@ export default function InventoryDetailPage() {
       <div className="card">
         <h3>販売登録（金額はすべて税込）</h3>
         {saleError && <div className="error">{saleError}</div>}
-        <div className="grid4">
+        <div className="grid3">
           <Field label="販売日"><input type="date" value={sale.soldDate} onChange={setS('soldDate')} /></Field>
-          <Field label="入金日"><input type="date" value={sale.paidDate} onChange={setS('paidDate')} /></Field>
           <Field label="販売金額（税込）"><input type="number" value={sale.salesAmount} onChange={setS('salesAmount')} /></Field>
-          <Field label="販売手数料"><input type="number" value={sale.fee} onChange={setS('fee')} /></Field>
-          <Field label="送料"><input type="number" value={sale.shipping} onChange={setS('shipping')} /></Field>
-          <Field label="その他原価"><input type="number" value={sale.otherCost} onChange={setS('otherCost')} /></Field>
-          <Field label="販売先"><input value={sale.buyer} onChange={setS('buyer')} /></Field>
-          <Field label="備考"><input value={sale.note} onChange={setS('note')} /></Field>
+          <Field label="販売先（販路）">
+            <select value={sale.channel || inv.salesChannel || ''} onChange={setS('channel')}>
+              <option value="">-</option>
+              {inv.salesChannel && !channels.some((ch) => ch.name === inv.salesChannel) && (
+                <option value={inv.salesChannel}>{inv.salesChannel}</option>
+              )}
+              {channels.map((ch) => <option key={ch.name} value={ch.name}>{ch.name}</option>)}
+            </select>
+          </Field>
         </div>
         <button onClick={submitSale} disabled={saving || !sale.soldDate || !sale.salesAmount}>
           {saving ? '登録中...' : '販売を登録'}
