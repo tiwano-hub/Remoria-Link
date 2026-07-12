@@ -4,13 +4,14 @@ import { Field } from '../components/ui';
 import { date } from '../lib/format';
 
 export default function MastersPage() {
-  const [m, setM] = useState<any>({ taxRates: [], channels: [], sources: [], locations: [], stores: [] });
+  const [m, setM] = useState<any>({ taxRates: [], channels: [], sources: [], locations: [], stores: [], subcontractors: [] });
   const [error, setError] = useState('');
 
   const [taxForm, setTaxForm] = useState({ label: '', rate: '', effectiveFrom: '', isDefault: false });
   const [channelName, setChannelName] = useState('');
   const [sourceName, setSourceName] = useState('');
   const [locationName, setLocationName] = useState('');
+  const [subName, setSubName] = useState('');
   const [storeForm, setStoreForm] = useState({ code: '', name: '' });
 
   const reload = () => {
@@ -131,6 +132,28 @@ export default function MastersPage() {
         <div className="toolbar">
           <Field label="名称"><input value={locationName} onChange={(e) => setLocationName(e.target.value)} /></Field>
           <button className="btn-sub" onClick={() => { run(api.post<any>('/api/masters/locations', { name: locationName })); setLocationName(''); }}>追加</button>
+        </div>
+      </div>
+
+      <div className="card">
+        <h3>外注先</h3>
+        <p className="muted">原価オプションの外注先で使用。案件の原価オプション欄から自由入力すると自動で追加されます。</p>
+        <table>
+          <thead><tr><th>名称</th><th>操作</th></tr></thead>
+          <tbody>
+            {(m.subcontractors || []).map((s: any) => (
+              <tr key={s.id}>
+                <td>{s.name}</td>
+                <td><button className="btn-sm btn-danger" onClick={() => run(api.del<any>(`/api/masters/subcontractors/${s.id}`))}>削除</button></td>
+              </tr>
+            ))}
+            {(m.subcontractors || []).length === 0 && <tr><td colSpan={2} className="muted">外注先がありません</td></tr>}
+          </tbody>
+        </table>
+        <div className="divider" />
+        <div className="toolbar">
+          <Field label="名称"><input value={subName} onChange={(e) => setSubName(e.target.value)} /></Field>
+          <button className="btn-sub" onClick={() => { run(api.post<any>('/api/masters/subcontractors', { name: subName })); setSubName(''); }}>追加</button>
         </div>
       </div>
 

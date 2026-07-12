@@ -205,6 +205,12 @@ model StorageLocation {
   active    Boolean  @default(true)
 }
 
+model Subcontractor {
+  id        String   @id @default(cuid())
+  name      String   @unique // 外注先
+  active    Boolean  @default(true)
+}
+
 // ============================================================
 // 顧客
 // ============================================================
@@ -338,6 +344,7 @@ model CostOption {
   caseId    String
   case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
   name      String
+  subcontractor String? // 外注先
   quantity  Int      @default(1)
   amount    Int      @default(0) // 税込
   note      String?

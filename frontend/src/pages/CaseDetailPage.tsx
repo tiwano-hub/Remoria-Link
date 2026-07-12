@@ -14,6 +14,7 @@ export default function CaseDetailPage() {
   const [c, setC] = useState<any>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [channels, setChannels] = useState<{ name: string }[]>([]);
+  const [subcontractors, setSubcontractors] = useState<{ name: string }[]>([]);
   const [error, setError] = useState('');
   const [tab, setTab] = useState('items');
 
@@ -24,7 +25,7 @@ export default function CaseDetailPage() {
   useEffect(() => {
     load();
     api.get<User[]>('/api/users').then(setUsers).catch(() => {});
-    api.get<any>('/api/masters').then((m) => setChannels(m.channels)).catch(() => {});
+    api.get<any>('/api/masters').then((m) => { setChannels(m.channels); setSubcontractors(m.subcontractors || []); }).catch(() => {});
   }, [load]);
 
   if (error) return <div className="error">{error}</div>;
@@ -125,8 +126,11 @@ export default function CaseDetailPage() {
           <Kpi label="案件オプション合計" v={yen(t.caseOptionTotal)} />
           <Kpi label="原価オプション合計" v={yen(t.costOptionTotal)} />
           <Kpi label="見込金額合計" v={yen(t.expectedTotal)} />
-          <Kpi label="顧客への支払額" v={yen(t.customerPayable)} />
-          <Kpi label="顧客からの受領額" v={yen(c.settlement?.customerReceipt ?? 0)} />
+          <Kpi
+            label={t.customerPayable >= 0 ? 'お客様へ支払う' : 'お客様から貰う'}
+            v={yen(Math.abs(t.customerPayable))}
+          />
+          <Kpi label="顧客からの受領額（実績）" v={yen(c.settlement?.customerReceipt ?? 0)} />
           <Kpi label="見込粗利" v={yen(t.expectedGrossProfit)} />
           <Kpi label="見込原価率" v={pct(t.expectedCostRate)} />
         </div>
@@ -139,7 +143,7 @@ export default function CaseDetailPage() {
       </div>
 
       {tab === 'items' && <ItemsTab c={c} channels={channels} reload={load} />}
-      {tab === 'options' && <OptionsTab c={c} reload={load} />}
+      {tab === 'options' && <OptionsTab c={c} reload={load} subcontractors={subcontractors} />}
       {tab === 'identity' && <IdentityTab c={c} users={users} reload={load} />}
       {tab === 'contracts' && <ContractsTab c={c} reload={load} navigate={navigate} />}
       {tab === 'receipts' && <ReceiptsTab c={c} reload={load} />}
@@ -298,11 +302,11 @@ function NewItemRows({ caseId, channels, reload }: any) {
 }
 
 // ---------------- オプション ----------------
-function OptionsTab({ c, reload }: any) {
+function OptionsTab({ c, reload, subcontractors = [] }: any) {
   const [co, setCo] = useState<any>({ name: '', quantity: 1, amount: 0, deductible: true });
-  const [ro, setRo] = useState<any>({ name: '', quantity: 1, amount: 0 });
+  const [ro, setRo] = useState<any>({ name: '', subcontractor: '', quantity: 1, amount: 0 });
   const addCase = async () => { await api.post('/api/options/case-options', { ...co, caseId: c.id, quantity: Number(co.quantity), amount: Number(co.amount) }); setCo({ name: '', quantity: 1, amount: 0, deductible: true }); reload(); };
-  const addCost = async () => { await api.post('/api/options/cost-options', { ...ro, caseId: c.id, quantity: Number(ro.quantity), amount: Number(ro.amount) }); setRo({ name: '', quantity: 1, amount: 0 }); reload(); };
+  const addCost = async () => { await api.post('/api/options/cost-options', { ...ro, caseId: c.id, subcontractor: ro.subcontractor || undefined, quantity: Number(ro.quantity), amount: Number(ro.amount) }); setRo({ name: '', subcontractor: '', quantity: 1, amount: 0 }); reload(); };
 
   return (
     <div className="grid2">
@@ -323,13 +327,24 @@ function OptionsTab({ c, reload }: any) {
 
       <div className="card">
         <h3>原価オプション <Internal>顧客・契約書・メール非表示</Internal></h3>
-        <table><thead><tr><th>名称</th><th>数量</th><th className="num">税込金額</th><th></th></tr></thead>
+        <table><thead><tr><th>名称</th><th>外注先</th><th className="num">税込金額</th><th></th></tr></thead>
           <tbody>{c.costOptions.map((o: any) => (
-            <tr key={o.id}><td>{o.name}</td><td>{o.quantity}</td><td className="num">{yen(o.amount)}</td>
+            <tr key={o.id}><td>{o.name}</td><td>{o.subcontractor || '-'}</td><td className="num">{yen(o.amount)}</td>
               <td><button className="btn-danger btn-sm" onClick={async () => { await api.del(`/api/options/cost-options/${o.id}`); reload(); }}>削除</button></td></tr>))}
           </tbody></table>
         <div className="grid2" style={{ marginTop: 10 }}>
           <Field label="名称"><input value={ro.name} onChange={(e) => setRo({ ...ro, name: e.target.value })} placeholder="外注費 等" /></Field>
+          <Field label="外注先（マスタ選択・自由入力可）">
+            <input
+              list="subcontractor-list"
+              value={ro.subcontractor}
+              onChange={(e) => setRo({ ...ro, subcontractor: e.target.value })}
+              placeholder="外注先を選択 or 入力"
+            />
+            <datalist id="subcontractor-list">
+              {subcontractors.map((s: any) => <option key={s.name} value={s.name} />)}
+            </datalist>
+          </Field>
           <Field label="税込金額"><input type="number" value={ro.amount} onChange={(e) => setRo({ ...ro, amount: e.target.value })} /></Field>
         </div>
         <button style={{ marginTop: 8 }} onClick={addCost} disabled={!ro.name}>追加</button>
