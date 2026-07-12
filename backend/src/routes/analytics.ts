@@ -95,6 +95,9 @@ router.get('/purchase', async (req, res) => {
 router.get('/sales', async (req, res) => {
   const { from, to, groupBy = 'none', taxMode = 'included', dateBase = 'sold' } = req.query as Record<string, string>;
   const rate = await getDefaultTaxRate();
+  // 在庫に設定された担当者名を引くためのマップ
+  const userList = await prisma.user.findMany({ select: { id: true, name: true } });
+  const userName = new Map(userList.map((u) => [u.id, u.name]));
   const fromD = from ? new Date(from) : null;
   const toD = to ? new Date(`${to}T23:59:59`) : null;
 
@@ -132,8 +135,9 @@ router.get('/sales', async (req, res) => {
   const keyOf = (s: (typeof sales)[number]): string => {
     const sc = s.inventory.sourceCase;
     switch (groupBy) {
-      case 'appraiser': return sc?.appraiser?.name ?? '未割当';
-      case 'booker': return sc?.booker?.name ?? '未割当';
+      // 在庫に設定された買取担当を優先し、無ければ元案件の担当を使う
+      case 'appraiser': return (s.inventory.appraiserId && userName.get(s.inventory.appraiserId)) || sc?.appraiser?.name || '未割当';
+      case 'booker': return (s.inventory.bookerId && userName.get(s.inventory.bookerId)) || sc?.booker?.name || '未割当';
       case 'customerType': return sc?.customer?.customerType === 'REPEATER' ? 'リピーター' : '新規';
       case 'referralSource': return sc?.referralSource ?? '未設定';
       case 'appointmentRank': return sc?.appointmentRank ?? '未設定';

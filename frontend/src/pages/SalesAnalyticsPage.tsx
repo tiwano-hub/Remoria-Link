@@ -5,7 +5,7 @@ import { yen, pct } from '../lib/format';
 
 const GROUP_BY_OPTIONS: { value: string; label: string }[] = [
   { value: 'none', label: '全体' },
-  { value: 'appraiser', label: '査定担当者別' },
+  { value: 'appraiser', label: '買取担当者別' },
   { value: 'booker', label: '予約担当者別' },
   { value: 'customerType', label: '顧客種別' },
   { value: 'referralSource', label: '反響経路' },

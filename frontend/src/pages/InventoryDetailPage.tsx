@@ -18,6 +18,7 @@ export default function InventoryDetailPage() {
   const [inv, setInv] = useState<any>(null);
   const [error, setError] = useState('');
   const [channels, setChannels] = useState<{ name: string }[]>([]);
+  const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const [sale, setSale] = useState<any>({ soldDate: '', salesAmount: 0, channel: '' });
   const [saleError, setSaleError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -29,6 +30,7 @@ export default function InventoryDetailPage() {
   useEffect(load, [load]);
   useEffect(() => {
     api.get<any>('/api/masters').then((m) => setChannels(m.channels || [])).catch(() => {});
+    api.get<any[]>('/api/users').then(setUsers).catch(() => {});
   }, []);
 
   if (error) return <div className="error">{error}</div>;
@@ -85,6 +87,15 @@ export default function InventoryDetailPage() {
             <Field label="保管場所"><div>{inv.storageLocation || '-'}</div></Field>
             <Field label="仕入日"><div>{date(inv.stockedAt)}</div></Field>
           </div>
+          <Field label="買取担当者（この商品を買ってきた人・粗利集計に反映）">
+            <select
+              value={inv.appraiserId || ''}
+              onChange={async (e) => { await api.put(`/api/inventory/${id}`, { appraiserId: e.target.value || null }); load(); }}
+            >
+              <option value="">未割当</option>
+              {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          </Field>
           <Field label="備考"><div>{inv.note || '-'}</div></Field>
           {inv.sourceCase && (
             <Field label="元案件">
