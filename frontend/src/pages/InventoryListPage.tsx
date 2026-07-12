@@ -12,7 +12,7 @@ export default function InventoryListPage() {
   const [channels, setChannels] = useState<{ name: string }[]>([]);
   const [f, setF] = useState({
     inventoryNumber: '', name: '', grade: '', salesChannel: '', status: '',
-    stockedFrom: '', stockedTo: '', appraiserId: '', caseNumber: '',
+    stockedFrom: '', stockedTo: '', appraiserId: '', caseNumber: '', includeClosed: '',
   });
 
   useEffect(() => {
@@ -70,6 +70,15 @@ export default function InventoryListPage() {
           </Field>
           <Field label="案件番号"><input value={f.caseNumber} onChange={set('caseNumber')} /></Field>
         </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input
+            type="checkbox"
+            style={{ width: 'auto' }}
+            checked={f.includeClosed === 'true'}
+            onChange={(e) => setF({ ...f, includeClosed: e.target.checked ? 'true' : '' })}
+          />
+          販売・処分済みも表示する
+        </label>
 
         <table>
           <thead>

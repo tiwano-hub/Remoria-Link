@@ -111,15 +111,22 @@ router.post('/', denyViewer, async (req, res) => {
 
 /** 在庫検索 */
 router.get('/', async (req, res) => {
-  const { inventoryNumber, name, grade, salesChannel, status, stockedFrom, stockedTo, appraiserId, caseNumber } =
+  const { inventoryNumber, name, grade, salesChannel, status, stockedFrom, stockedTo, appraiserId, caseNumber, includeClosed } =
     req.query as Record<string, string>;
+  // ステータス条件：明示指定があればそれ。無ければ既定で「売却済・廃棄」を除外
+  // （includeClosed=true のときは除外しない）
+  const statusWhere = status
+    ? (status as any)
+    : includeClosed === 'true'
+      ? undefined
+      : { notIn: ['SOLD', 'DISPOSED'] as any };
   const list = await prisma.inventoryItem.findMany({
     where: {
       inventoryNumber: inventoryNumber ? { contains: inventoryNumber } : undefined,
       name: name ? { contains: name } : undefined,
       grade: grade ? (grade as any) : undefined,
       salesChannel: salesChannel ? { contains: salesChannel } : undefined,
-      status: status ? (status as any) : undefined,
+      status: statusWhere,
       appraiserId: appraiserId || undefined,
       stockedAt: {
         gte: stockedFrom ? new Date(stockedFrom) : undefined,
