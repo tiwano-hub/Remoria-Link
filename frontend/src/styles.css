@@ -96,8 +96,11 @@ a:hover { text-decoration: underline; }
 
 .main { flex: 1; min-width: 0; }
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
   height: 52px;
-  background: rgba(4, 18, 12, 0.6);
+  background: rgba(4, 18, 12, 0.85);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
