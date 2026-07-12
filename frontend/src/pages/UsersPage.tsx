@@ -20,7 +20,7 @@ export default function UsersPage() {
   };
 
   const del = (u: any) => {
-    if (!confirm(`${u.name}（${u.email}）を削除しますか？\nこの操作は取り消せません。`)) return;
+    if (!confirm(`${u.name}（${u.email}）を完全に削除しますか？\nこの操作は取り消せません。`)) return;
     setError('');
     api.del(`/api/users/${u.id}`)
       .then(reload)
@@ -30,54 +30,46 @@ export default function UsersPage() {
   return (
     <div>
       <h2>ユーザー管理</h2>
-
       {error && <div className="error">{error}</div>}
 
-      <div className="card">
-        <table>
-          <thead>
-            <tr>
-              <th>氏名</th><th>メール</th><th>権限</th><th>店舗</th><th>状態</th><th>カレンダーID</th><th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u.id}>
-                <td>{u.name}</td>
-                <td>{u.email}</td>
-                <td>
-                  <select value={u.role} onChange={(e) => save(u.id, { role: e.target.value as Role })}>
-                    {(Object.keys(ROLE_LABEL) as Role[]).map((r) => (
-                      <option key={r} value={r}>{ROLE_LABEL[r]}</option>
-                    ))}
-                  </select>
-                </td>
-                <td>{u.store?.name || '-'}</td>
-                <td>
-                  <button
-                    className={`btn-sm ${u.active ? 'btn-sub' : 'btn-danger'}`}
-                    onClick={() => save(u.id, { active: !u.active })}
-                  >
-                    {u.active ? '有効' : '無効'}
-                  </button>
-                </td>
-                <td>
-                  <input
-                    defaultValue={u.calendarId || ''}
-                    onBlur={(e) => {
-                      if (e.target.value !== (u.calendarId || '')) save(u.id, { calendarId: e.target.value });
-                    }}
-                  />
-                </td>
-                <td>
-                  <button className="btn-danger btn-sm" onClick={() => del(u)}>削除</button>
-                </td>
-              </tr>
-            ))}
-            {users.length === 0 && <tr><td colSpan={7} className="muted">ユーザーがいません</td></tr>}
-          </tbody>
-        </table>
-      </div>
+      {users.length === 0 && <p className="muted">ユーザーがいません</p>}
+
+      {users.map((u) => (
+        <div key={u.id} className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+            <div>
+              <b>{u.name}</b>{!u.active && <span className="badge red" style={{ marginLeft: 8 }}>無効</span>}
+              <div className="muted" style={{ fontSize: 13 }}>{u.email}</div>
+            </div>
+            <div className="muted" style={{ fontSize: 13 }}>{u.store?.name || '-'}</div>
+          </div>
+
+          <div className="grid2" style={{ marginTop: 10 }}>
+            <div>
+              <label>権限</label>
+              <select value={u.role} onChange={(e) => save(u.id, { role: e.target.value as Role })}>
+                {(Object.keys(ROLE_LABEL) as Role[]).map((r) => (
+                  <option key={r} value={r}>{ROLE_LABEL[r]}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label>カレンダーID</label>
+              <input
+                defaultValue={u.calendarId || ''}
+                onBlur={(e) => { if (e.target.value !== (u.calendarId || '')) save(u.id, { calendarId: e.target.value }); }}
+              />
+            </div>
+          </div>
+
+          <div className="row" style={{ marginTop: 12 }}>
+            <button className="btn-sub btn-sm" onClick={() => save(u.id, { active: !u.active })}>
+              {u.active ? '無効にする' : '有効にする'}
+            </button>
+            <button className="btn-danger btn-sm" onClick={() => del(u)}>完全に削除</button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
