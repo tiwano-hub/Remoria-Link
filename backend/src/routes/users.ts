@@ -15,6 +15,25 @@ router.get('/', async (_req, res) => {
   res.json(users);
 });
 
+/** ユーザー追加は管理者のみ（このメールでログイン可能になる） */
+router.post('/', requireRole('ADMIN'), async (req, res) => {
+  const schema = z.object({
+    email: z.string().email('メールアドレスの形式が正しくありません'),
+    name: z.string().min(1, '氏名を入力してください'),
+    role: z.enum(['ADMIN', 'STORE_MANAGER', 'APPRAISER', 'BOOKER', 'VIEWER']).default('VIEWER'),
+    storeId: z.string().nullish(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  const email = parsed.data.email.trim();
+  const exists = await prisma.user.findUnique({ where: { email } });
+  if (exists) return res.status(409).json({ error: 'このメールアドレスは既に登録されています' });
+  const user = await prisma.user.create({
+    data: { email, name: parsed.data.name, role: parsed.data.role, storeId: parsed.data.storeId ?? undefined },
+  });
+  res.status(201).json(user);
+});
+
 /** 権限・状態変更は管理者のみ */
 router.put('/:id', requireRole('ADMIN'), async (req, res) => {
   const schema = z.object({

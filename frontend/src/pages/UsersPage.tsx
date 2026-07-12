@@ -27,10 +27,40 @@ export default function UsersPage() {
       .catch((e) => setError(e.message));
   };
 
+  const [nf, setNf] = useState<any>({ email: '', name: '', role: 'VIEWER' });
+  const add = () => {
+    setError('');
+    api.post('/api/users', nf)
+      .then(() => { setNf({ email: '', name: '', role: 'VIEWER' }); reload(); })
+      .catch((e) => setError(e.message));
+  };
+
   return (
     <div>
       <h2>ユーザー管理</h2>
       {error && <div className="error">{error}</div>}
+
+      <div className="card">
+        <h3>ユーザーを追加</h3>
+        <p className="muted">ここで追加したメールアドレスだけがログインできます。未登録のアドレスではログインできません。</p>
+        <div className="grid3">
+          <div>
+            <label>メールアドレス</label>
+            <input value={nf.email} onChange={(e) => setNf({ ...nf, email: e.target.value })} placeholder="user@example.com" />
+          </div>
+          <div>
+            <label>氏名</label>
+            <input value={nf.name} onChange={(e) => setNf({ ...nf, name: e.target.value })} placeholder="山田 太郎" />
+          </div>
+          <div>
+            <label>権限</label>
+            <select value={nf.role} onChange={(e) => setNf({ ...nf, role: e.target.value })}>
+              {(Object.keys(ROLE_LABEL) as Role[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+            </select>
+          </div>
+        </div>
+        <button style={{ marginTop: 10 }} onClick={add} disabled={!nf.email || !nf.name}>追加</button>
+      </div>
 
       {users.length === 0 && <p className="muted">ユーザーがいません</p>}
 

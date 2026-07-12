@@ -34,15 +34,15 @@ router.post('/google', blockIfLoginDisabled, async (req, res) => {
 
     let user = await prisma.user.findUnique({ where: { email: payload.email } });
     if (!user) {
+      // 初期セットアップ用：ユーザーが1人もいないときだけ、最初のログインを管理者として作成
       const count = await prisma.user.count();
-      user = await prisma.user.create({
-        data: {
-          email: payload.email,
-          name: payload.name || payload.email,
-          googleId: payload.sub,
-          role: count === 0 ? 'ADMIN' : 'VIEWER',
-        },
-      });
+      if (count === 0) {
+        user = await prisma.user.create({
+          data: { email: payload.email, name: payload.name || payload.email, googleId: payload.sub, role: 'ADMIN' },
+        });
+      } else {
+        return res.status(403).json({ error: '登録されていないメールアドレスです。管理者にユーザー追加を依頼してください。' });
+      }
     } else if (!user.googleId) {
       user = await prisma.user.update({
         where: { id: user.id },
@@ -82,15 +82,19 @@ router.post('/dev-login', blockIfLoginDisabled, async (req, res) => {
   if (env.nodeEnv === 'production' && !env.allowSimpleLogin) {
     return res.status(403).json({ error: '簡易ログインは無効です（管理者にお問い合わせください）' });
   }
-  const { email } = req.body as { email?: string };
+  const email = (req.body?.email as string | undefined)?.trim();
   if (!email) return res.status(400).json({ error: 'email が必要です' });
   let user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
+    // 初期セットアップ用：ユーザーが1人もいないときだけ、最初のログインを管理者として作成
     const count = await prisma.user.count();
-    user = await prisma.user.create({
-      data: { email, name: email.split('@')[0], role: count === 0 ? 'ADMIN' : 'VIEWER' },
-    });
+    if (count === 0) {
+      user = await prisma.user.create({ data: { email, name: email.split('@')[0], role: 'ADMIN' } });
+    } else {
+      return res.status(403).json({ error: '登録されていないメールアドレスです。管理者にユーザー追加を依頼してください。' });
+    }
   }
+  if (!user.active) return res.status(403).json({ error: 'このアカウントは無効化されています。' });
   const sessionUser: AuthUser = {
     id: user.id,
     email: user.email,
