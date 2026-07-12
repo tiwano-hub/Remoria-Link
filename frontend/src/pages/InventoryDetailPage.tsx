@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import { Field, InventoryBadge } from '../components/ui';
 import { yen, date } from '../lib/format';
 import { INVENTORY_STATUS_LABEL } from '../types';
+import { useAuth } from '../auth';
 
 function toDataUrl(file: File): Promise<string> {
   return new Promise((resolve) => {
@@ -15,6 +16,8 @@ function toDataUrl(file: File): Promise<string> {
 
 export default function InventoryDetailPage() {
   const { id } = useParams();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const [inv, setInv] = useState<any>(null);
   const [error, setError] = useState('');
   const [channels, setChannels] = useState<{ name: string }[]>([]);
@@ -88,13 +91,17 @@ export default function InventoryDetailPage() {
             <Field label="仕入日"><div>{date(inv.stockedAt)}</div></Field>
           </div>
           <Field label="買取担当者（この商品を買ってきた人・粗利集計に反映）">
-            <select
-              value={inv.appraiserId || ''}
-              onChange={async (e) => { await api.put(`/api/inventory/${id}`, { appraiserId: e.target.value || null }); load(); }}
-            >
-              <option value="">未割当</option>
-              {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
+            {isAdmin ? (
+              <select
+                value={inv.appraiserId || ''}
+                onChange={async (e) => { await api.put(`/api/inventory/${id}`, { appraiserId: e.target.value || null }); load(); }}
+              >
+                <option value="">未割当</option>
+                {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            ) : (
+              <div>{users.find((u) => u.id === inv.appraiserId)?.name || '未割当'}<span className="muted"> （変更は管理者のみ）</span></div>
+            )}
           </Field>
           <Field label="備考"><div>{inv.note || '-'}</div></Field>
           {inv.sourceCase && (

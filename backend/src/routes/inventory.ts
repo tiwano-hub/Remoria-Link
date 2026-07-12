@@ -155,6 +155,10 @@ router.put('/:id', denyViewer, async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const data: any = { ...parsed.data };
   delete data.storeId;
+  // 買取担当者(appraiserId)の変更は管理者のみ
+  if ('appraiserId' in data && req.user!.role !== 'ADMIN') {
+    return res.status(403).json({ error: '買取担当者を変更できるのは管理者のみです' });
+  }
   const inv = await prisma.inventoryItem.update({ where: { id: req.params.id }, data });
   res.json(inv);
 });
