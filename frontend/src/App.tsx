@@ -22,6 +22,7 @@ import UsersPage from './pages/UsersPage';
 import MastersPage from './pages/MastersPage';
 import AuditLogsPage from './pages/AuditLogsPage';
 import HelpPage from './pages/HelpPage';
+import CashflowPage from './pages/CashflowPage';
 
 function Protected({ children }: { children: JSX.Element }) {
   const { user, loading } = useAuth();
@@ -51,6 +52,7 @@ export default function App() {
       <Route path="/sales" element={<Protected><SalesPage /></Protected>} />
       <Route path="/payments" element={<Protected><PaymentsPage /></Protected>} />
       <Route path="/receipts" element={<Protected><ReceiptsPage /></Protected>} />
+      <Route path="/cashflow" element={<Protected><CashflowPage /></Protected>} />
       <Route path="/analytics/purchase" element={<Protected><PurchaseAnalyticsPage /></Protected>} />
       <Route path="/analytics/sales" element={<Protected><SalesAnalyticsPage /></Protected>} />
       <Route path="/users" element={<Protected><UsersPage /></Protected>} />

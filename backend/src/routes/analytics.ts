@@ -186,4 +186,70 @@ router.get('/sales', async (req, res) => {
   res.json({ taxMode, groupBy, dateBase, rows });
 });
 
+/**
+ * 入出金レポート（差し引き前の総額）
+ * GET /api/analytics/cashflow?from=YYYY-MM-DD&to=YYYY-MM-DD
+ * 現金精算(Settlement)と振込(Payment)を「支払（当社→顧客）」「受取（顧客→当社）」で
+ * ネットせず総額集計する。例：Aへ1万円支払い、Aから2万円受取 → 支払1万・受取2万として計上。
+ */
+router.get('/cashflow', async (req, res) => {
+  const { from, to } = req.query as Record<string, string>;
+  const fromD = from ? new Date(from) : null;
+  const toD = to ? new Date(`${to}T23:59:59`) : null;
+  const inRange = (d: Date | null | undefined) => {
+    if (!d) return false;
+    if (fromD && d < fromD) return false;
+    if (toD && d > toD) return false;
+    return true;
+  };
+
+  type Kind = '現金支払' | '現金受取' | '振込支払' | '振込受取';
+  type Tx = { date: string; caseNumber: string; customer: string; kind: Kind; amount: number };
+  const txs: Tx[] = [];
+
+  // 振込（実行済のみ・実行日で判定）
+  const payments = await prisma.payment.findMany({
+    where: { status: 'COMPLETED' },
+    include: { case: { include: { customer: { select: { name: true } } } } },
+  });
+  for (const p of payments) {
+    if (!inRange(p.executedDate)) continue;
+    txs.push({
+      date: p.executedDate!.toISOString().slice(0, 10),
+      caseNumber: p.case.caseNumber,
+      customer: p.case.customer?.name ?? '',
+      kind: p.direction === 'WITHDRAWAL' ? '振込支払' : '振込受取',
+      amount: p.amount,
+    });
+  }
+
+  // 現金精算（取引日＝案件の契約日→作業日→精算更新日）
+  const settlements = await prisma.settlement.findMany({
+    include: { case: { include: { customer: { select: { name: true } } } } },
+  });
+  for (const s of settlements) {
+    const d = s.case.contractAt ?? s.case.workAt ?? s.updatedAt;
+    if (!inRange(d)) continue;
+    const dateStr = d.toISOString().slice(0, 10);
+    const base = { date: dateStr, caseNumber: s.case.caseNumber, customer: s.case.customer?.name ?? '' };
+    if (s.cashPaid > 0) txs.push({ ...base, kind: '現金支払', amount: s.cashPaid });
+    if (s.cashReceived > 0) txs.push({ ...base, kind: '現金受取', amount: s.cashReceived });
+  }
+
+  txs.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)); // 新しい順
+
+  const sum = (k: Kind) => txs.filter((t) => t.kind === k).reduce((a, t) => a + t.amount, 0);
+  const summary = {
+    paidCash: sum('現金支払'),
+    paidTransfer: sum('振込支払'),
+    receivedCash: sum('現金受取'),
+    receivedTransfer: sum('振込受取'),
+  };
+  const totals = {
+    paid: summary.paidCash + summary.paidTransfer,
+    received: summary.receivedCash + summary.receivedTransfer,
+  };
+  res.json({ summary, totals, transactions: txs });
+});
+
 export default router;

@@ -13,6 +13,7 @@ const nav = [
   { to: '/sales', label: '販売実績' },
   { group: '入出金' },
   { to: '/payments', label: '入出金管理' },
+  { to: '/cashflow', label: '入出金レポート' },
   { to: '/receipts', label: '電子領収書' },
   { group: '分析' },
   { to: '/analytics/purchase', label: '買取分析' },
