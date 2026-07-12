@@ -120,9 +120,29 @@ router.get('/customers.csv', async (_req, res) => {
   ]);
 });
 
-/** 在庫 */
-router.get('/inventory.csv', async (_req, res) => {
+/** 在庫（一覧と同じ絞り込みに対応。既定で売却済・廃棄を除外） */
+router.get('/inventory.csv', async (req, res) => {
+  const { inventoryNumber, name, grade, salesChannel, status, stockedFrom, stockedTo, appraiserId, caseNumber, includeClosed } =
+    req.query as Record<string, string>;
+  const statusWhere = status
+    ? (status as any)
+    : includeClosed === 'true'
+      ? undefined
+      : { notIn: ['SOLD', 'DISPOSED'] as any };
   const data = await prisma.inventoryItem.findMany({
+    where: {
+      inventoryNumber: inventoryNumber ? { contains: inventoryNumber } : undefined,
+      name: name ? { contains: name } : undefined,
+      grade: grade ? (grade as any) : undefined,
+      salesChannel: salesChannel ? { contains: salesChannel } : undefined,
+      status: statusWhere,
+      appraiserId: appraiserId || undefined,
+      stockedAt: {
+        gte: stockedFrom ? new Date(stockedFrom) : undefined,
+        lte: stockedTo ? new Date(`${stockedTo}T23:59:59`) : undefined,
+      },
+      sourceCase: caseNumber ? { caseNumber: { contains: caseNumber } } : undefined,
+    },
     include: { sourceCase: true },
     orderBy: { createdAt: 'desc' },
   });

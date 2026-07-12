@@ -33,7 +33,14 @@ export default function InventoryListPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2>在庫一覧</h2>
         <div className="row">
-          <button className="btn-sub" onClick={() => api.download('/api/export/inventory.csv', 'inventory.csv').catch(() => {})}>CSV出力</button>
+          <button
+            className="btn-sub"
+            onClick={() => {
+              const qs = new URLSearchParams();
+              Object.entries(f).forEach(([k, v]) => { if (v) qs.set(k, v); });
+              api.download(`/api/export/inventory.csv?${qs.toString()}`, 'inventory.csv').catch(() => {});
+            }}
+          >CSV出力</button>
           <Link to="/inventory/new"><button>在庫登録</button></Link>
         </div>
       </div>
