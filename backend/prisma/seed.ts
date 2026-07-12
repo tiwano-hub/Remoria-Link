@@ -31,22 +31,13 @@ async function main() {
     await prisma.storageLocation.upsert({ where: { name }, create: { name }, update: {} });
   }
 
-  // 管理者ユーザー（開発用ログインで使用）
-  await prisma.user.upsert({
-    where: { email: 'admin@example.com' },
-    create: { email: 'admin@example.com', name: '管理者', role: 'ADMIN', storeId: store.id },
-    update: {},
-  });
   // 本番管理者ログイン（存在すれば管理者権限に固定）
+  // ※サンプルの admin@example.com / appraiser@example.com は再作成しない
+  //   （削除しても復活しないように、seed からは投入しない）
   await prisma.user.upsert({
     where: { email: 't.iwano0515@gmail.com' },
     create: { email: 't.iwano0515@gmail.com', name: '管理者', role: 'ADMIN', storeId: store.id },
     update: { role: 'ADMIN', active: true },
-  });
-  await prisma.user.upsert({
-    where: { email: 'appraiser@example.com' },
-    create: { email: 'appraiser@example.com', name: '査定 太郎', role: 'APPRAISER', storeId: store.id },
-    update: {},
   });
 
   console.log('Seed completed.');

@@ -30,4 +30,20 @@ router.put('/:id', requireRole('ADMIN'), async (req, res) => {
   res.json(user);
 });
 
+/** ユーザー削除は管理者のみ（自分自身・最後の管理者は不可） */
+router.delete('/:id', requireRole('ADMIN'), async (req, res) => {
+  if (req.user!.id === req.params.id) {
+    return res.status(400).json({ error: '自分自身は削除できません' });
+  }
+  const target = await prisma.user.findUnique({ where: { id: req.params.id } });
+  if (!target) return res.status(404).json({ error: 'ユーザーが見つかりません' });
+  if (target.role === 'ADMIN') {
+    const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
+    if (adminCount <= 1) return res.status(400).json({ error: '管理者が1人になるため削除できません' });
+  }
+  // 案件・ログの担当参照は自動的に空欄になる（ON DELETE SET NULL）
+  await prisma.user.delete({ where: { id: req.params.id } });
+  res.json({ ok: true });
+});
+
 export default router;

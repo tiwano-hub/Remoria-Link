@@ -19,6 +19,14 @@ export default function UsersPage() {
       .catch((e) => setError(e.message));
   };
 
+  const del = (u: any) => {
+    if (!confirm(`${u.name}（${u.email}）を削除しますか？\nこの操作は取り消せません。`)) return;
+    setError('');
+    api.del(`/api/users/${u.id}`)
+      .then(reload)
+      .catch((e) => setError(e.message));
+  };
+
   return (
     <div>
       <h2>ユーザー管理</h2>
@@ -29,7 +37,7 @@ export default function UsersPage() {
         <table>
           <thead>
             <tr>
-              <th>氏名</th><th>メール</th><th>権限</th><th>店舗</th><th>状態</th><th>カレンダーID</th>
+              <th>氏名</th><th>メール</th><th>権限</th><th>店舗</th><th>状態</th><th>カレンダーID</th><th>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -61,9 +69,12 @@ export default function UsersPage() {
                     }}
                   />
                 </td>
+                <td>
+                  <button className="btn-danger btn-sm" onClick={() => del(u)}>削除</button>
+                </td>
               </tr>
             ))}
-            {users.length === 0 && <tr><td colSpan={6} className="muted">ユーザーがいません</td></tr>}
+            {users.length === 0 && <tr><td colSpan={7} className="muted">ユーザーがいません</td></tr>}
           </tbody>
         </table>
       </div>
