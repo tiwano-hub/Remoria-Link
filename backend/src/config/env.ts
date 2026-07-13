@@ -15,6 +15,17 @@ export const env = {
   allowSimpleLogin: process.env.ALLOW_SIMPLE_LOGIN === 'true',
   // 一時的にログインを停止する（メンテナンス等）。true の間は全ログインを拒否。
   loginDisabled: process.env.LOGIN_DISABLED === 'true',
+  // メール送信（SMTP）
+  smtpHost: process.env.SMTP_HOST || '',
+  smtpPort: Number(process.env.SMTP_PORT || 587),
+  smtpSecure: process.env.SMTP_SECURE === 'true',
+  smtpUser: process.env.SMTP_USER || '',
+  smtpPass: process.env.SMTP_PASS || '',
+  mailFrom: process.env.MAIL_FROM || '',
+  // SMS送信（Twilio）
+  twilioSid: process.env.TWILIO_ACCOUNT_SID || '',
+  twilioToken: process.env.TWILIO_AUTH_TOKEN || '',
+  twilioFrom: process.env.TWILIO_FROM || '',
 };
 
 export const isProd = env.nodeEnv === 'production';

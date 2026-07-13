@@ -445,14 +445,27 @@ function ReceiptsTab({ c, reload }: any) {
     alert(`領収書 ${r.receiptNumber} を発行しました`);
     reload();
   };
+  const send = async (id: string, channel: 'sms' | 'email') => {
+    try {
+      await api.post(`/api/receipts/${id}/send`, { channel });
+      alert(channel === 'sms' ? 'SMSで送信しました' : 'メールで送信しました');
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
   return (
     <div className="card">
       <h3>電子領収書</h3>
-      <table><thead><tr><th>領収書番号</th><th>発行日</th><th>宛名</th><th className="num">金額</th><th>方法</th><th>状態</th><th>PDF</th></tr></thead>
+      <p className="muted">送信先：SMS＝顧客の電話番号（{c.customer.phone || '未登録'}）／メール＝{c.customer.email || 'メール未登録'}</p>
+      <table><thead><tr><th>領収書番号</th><th>発行日</th><th>宛名</th><th className="num">金額</th><th>状態</th><th>PDF</th><th>送信</th></tr></thead>
         <tbody>{c.receipts.map((r: any) => (
-          <tr key={r.id}><td>{r.receiptNumber}</td><td>{date(r.issuedAt)}</td><td>{r.recipientName}</td><td className="num">{yen(r.amount)}</td><td>{r.paymentMethod}</td>
+          <tr key={r.id}><td>{r.receiptNumber}</td><td>{date(r.issuedAt)}</td><td>{r.recipientName}</td><td className="num">{yen(r.amount)}</td>
             <td>{r.status === 'ISSUED' ? '発行済' : r.status === 'CANCELLED' ? '取消' : '再発行(旧)'}</td>
-            <td><a href={`${api.baseUrl}/api/receipts/${r.id}/pdf`} target="_blank" rel="noreferrer">PDF</a></td></tr>))}
+            <td><a href={`${api.baseUrl}/api/receipts/${r.id}/pdf`} target="_blank" rel="noreferrer">PDF</a></td>
+            <td>
+              <button className="btn-sub btn-sm" onClick={() => send(r.id, 'sms')}>SMS</button>{' '}
+              <button className="btn-sub btn-sm" onClick={() => send(r.id, 'email')}>メール</button>
+            </td></tr>))}
           {c.receipts.length === 0 && <tr><td colSpan={7} className="muted">未発行</td></tr>}
         </tbody></table>
       <div className="divider" />

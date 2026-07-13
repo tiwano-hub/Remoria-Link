@@ -31,8 +31,12 @@ export default function ContractCreatePage() {
     }
   };
   const send = async (channel: string) => {
-    const r = await api.post<any>(`/api/contracts/${created.id}/send`, { channel });
-    alert(`顧客へURLを送信しました（${channel}）\n${r.url}`);
+    try {
+      await api.post<any>(`/api/contracts/${created.id}/send`, { channel });
+      alert(channel === 'sms' ? 'SMSで送信しました' : 'メールで送信しました');
+    } catch (e: any) {
+      alert(e.message);
+    }
   };
 
   return (

@@ -8,6 +8,7 @@ import { nextReceiptNumber } from '../lib/numbering';
 import { getDefaultTaxRate, taxExcluded, taxAmount } from '../lib/tax';
 import { generateReceiptPdf } from '../services/pdf';
 import { env } from '../config/env';
+import { sendSms, sendEmail } from '../services/notify';
 
 const router = Router();
 router.use(authenticate);
@@ -173,6 +174,28 @@ router.get('/case/:caseId', async (req, res) => {
     orderBy: { createdAt: 'desc' },
   });
   res.json(list.map((r) => ({ ...r, url: `${env.appPublicUrl}/receipt/${r.token}` })));
+});
+
+/** POST /:id/send  領収書リンクを顧客へSMS/メール送信 */
+router.post('/:id/send', denyViewer, async (req, res) => {
+  const { channel } = req.body as { channel?: 'sms' | 'email' };
+  const r = await prisma.receipt.findUnique({
+    where: { id: req.params.id },
+    include: { case: { include: { customer: true } } },
+  });
+  if (!r) return res.status(404).json({ error: '領収書が見つかりません' });
+  const url = `${env.appPublicUrl}/receipt/${r.token}`;
+  const cust = r.case.customer;
+  const msg = `【Remoria Link】電子領収書（${r.receiptNumber}）を発行しました。\n${url}`;
+  try {
+    if (channel === 'sms') await sendSms(cust.phone, msg);
+    else if (channel === 'email') await sendEmail(cust.email || '', '電子領収書の発行', msg);
+    else return res.status(400).json({ error: 'channel は sms か email を指定してください' });
+  } catch (e: any) {
+    return res.status(502).json({ error: e?.message || '送信に失敗しました' });
+  }
+  await audit(req, { action: 'RECEIPT_ISSUE', caseNumber: r.case.caseNumber, entity: 'Receipt', entityId: r.id, description: `領収書送信 (${channel})` });
+  res.json({ ok: true, url, channel });
 });
 
 /** PDF ダウンロード */
