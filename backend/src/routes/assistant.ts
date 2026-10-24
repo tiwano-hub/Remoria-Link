@@ -48,8 +48,9 @@ ${buildManualMarkdown()}
   try {
     const client = new Anthropic({ apiKey });
     const response = await client.messages.create({
-      model: 'claude-opus-4-8',
-      max_tokens: 1500,
+      model: 'claude-opus-5-5',
+      // 思考（thinking）が常時有効なモデルのため、回答が途中で切れないよう余裕を持たせる
+      max_tokens: 16000,
       system,
       messages: parsed.data.messages,
     });
@@ -58,6 +59,9 @@ ${buildManualMarkdown()}
       .map((b) => b.text)
       .join('\n')
       .trim();
+    if (response.stop_reason === 'refusal') {
+      return res.json({ reply: 'この質問にはお答えできません。表現を変えてもう一度お試しください。' });
+    }
     res.json({ reply: text || '（応答を生成できませんでした）' });
   } catch (e: any) {
     res.status(502).json({ error: e?.message || 'AIサポートでエラーが発生しました。' });
